@@ -3896,29 +3896,59 @@ async function getJobPaidMap(jobIds) {
   return map;
 }
 
+function getPrintDefaultDesignRate(){const n=Number(localStorage.getItem("atl_print_design_hourly_rate"));return Number.isFinite(n)&&n>=0?n:65;}
+function calculatePrintQuote(){
+  const weight=Number($("pjWeight")?.value||0), rate=Number($("pjRate")?.value||0);
+  const hours=Number($("pjDesignHours")?.value||0), hourly=Number($("pjDesignRate")?.value||getPrintDefaultDesignRate());
+  const filament=Number($("pjFilamentCost")?.value||0), maintenance=Number($("pjMaintenanceCost")?.value||0);
+  const design=hours*hourly, print=weight*rate, calculated=print+design;
+  const manualText=$("pjManualPrice")?.value?.trim()||"", manual=manualText===""?null:Number(manualText);
+  const total=manual===null?calculated:manual;
+  return {weight,rate,hours,hourly,filament,maintenance,design,print,calculated,manual,total,expense:filament+maintenance};
+}
+function updatePrintEstimate(){
+  const x=calculatePrintQuote();
+  if($("pjEstimate")) $("pjEstimate").innerHTML=`<strong>Printing charge:</strong> ${money(x.print)} &nbsp; <strong>Design charge:</strong> ${money(x.design)}<br><strong>Calculated price:</strong> ${money(x.calculated)} &nbsp; <strong>Final customer price:</strong> ${money(x.total)}<br><span class="muted">Recorded expenses: Filament ${money(x.filament)} + Maintenance ${money(x.maintenance)} = ${money(x.expense)}</span>`;
+}
 async function renderPrintingJobs() {
+  const defaultRate=getPrintDefaultDesignRate();
   $("pageContent").innerHTML = `
-    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, charges and customer payments.</p></div><button type="button" class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
+    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, customer pricing, actual payments and printing expenses.</p></div><button type="button" class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
+    <div class="cards" id="printingFinanceCards">
+      <div class="stat-card"><div class="stat-title">Total printing estimates</div><div class="stat-number" id="printTotalEstimates">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Actually earned (payments)</div><div class="stat-number" id="printTotalEarned">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Filament spent</div><div class="stat-number" id="printFilamentSpent">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Maintenance spent</div><div class="stat-number" id="printMaintenanceSpent">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Total recorded expenses</div><div class="stat-number" id="printTotalExpenses">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Earned minus expenses</div><div class="stat-number" id="printNetResult">₹0.00</div></div>
+    </div>
     <div class="panel printing-create-panel">
-      <div class="printing-section-heading"><span class="printing-heading-icon">＋</span><div><h3>Create print job</h3><p>Add a new 3D printed part and calculate its price</p></div></div>
+      <div class="printing-section-heading"><span class="printing-heading-icon">＋</span><div><h3>Create print job</h3><p>Calculate the printing price, design charge and job expenses separately</p></div></div>
       <form id="printingJobForm"><div class="form-grid">
         <div class="field"><label>Customer / Student *</label><input id="pjCustomer" required maxlength="150" placeholder="Customer name"></div>
         <div class="field"><label>Model / Part name *</label><input id="pjModel" required maxlength="150" placeholder="Part name"></div>
         <div class="field"><label>Material</label><select id="pjMaterial"><option>PLA</option><option>PETG</option><option>ABS</option><option>TPU</option><option>Resin</option><option>Other</option></select></div>
         <div class="field"><label>Colour</label><input id="pjColour" placeholder="e.g. Black"></div>
-        <div class="field"><label>Weight (grams) *</label><input id="pjWeight" type="number" min="0.01" step="0.01" required value="1"></div>
-        <div class="field"><label>Rate per gram (₹) *</label><input id="pjRate" type="number" min="0" step="0.01" required value="5"></div>
+        <div class="field"><label>Filament weight (grams) *</label><input id="pjWeight" type="number" min="0.01" step="0.01" required value="1"></div>
+        <div class="field"><label>Printing rate per gram (₹) *</label><input id="pjRate" type="number" min="0" step="0.01" required value="5"></div>
+        <div class="field"><label>Design hours</label><input id="pjDesignHours" type="number" min="0" step="0.25" value="1"></div>
+        <div class="field"><label>Design rate per hour (₹)</label><input id="pjDesignRate" type="number" min="0" step="0.01" value="${defaultRate}"></div>
+        <div class="field"><label>Save as default design rate (₹/hour)</label><button type="button" class="btn btn-outline" id="saveDesignRateDefault">Save current hourly rate as default</button><small class="muted">Default is ₹65/hour. You can change it to ₹66 or another amount.</small></div>
+        <div class="field"><label>Custom final price (₹) — optional</label><input id="pjManualPrice" type="number" min="0" step="0.01" placeholder="Leave blank to use calculated price"></div>
+        <div class="field"><label>Filament expense for this job (₹)</label><input id="pjFilamentCost" type="number" min="0" step="0.01" value="0"></div>
+        <div class="field"><label>Maintenance expense for this job (₹)</label><input id="pjMaintenanceCost" type="number" min="0" step="0.01" value="0"></div>
         <div class="field"><label>Due date</label><input id="pjDue" type="date"></div>
         <div class="field"><label>Status</label><select id="pjStatus"><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
-        <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="pjNotes" rows="2"></textarea></div>
-      </div><div class="notice" id="pjEstimate">Estimated total: ₹5.00</div><button class="btn btn-primary" type="submit" id="savePrintingJob">Save print job</button><div id="pjError" class="error"></div></form>
+        <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="pjNotes" rows="2" placeholder="Optional details"></textarea></div>
+      </div><div class="notice" id="pjEstimate">Calculated price: ₹70.00</div><button class="btn btn-primary" type="submit" id="savePrintingJob">Save print job</button><div id="pjError" class="error"></div></form>
     </div>
-    <div class="panel printing-jobs-panel"><div class="printing-list-heading"><div><h3>Printing job records</h3><p>Track progress, payments and customer balances</p></div><span class="printing-record-label">LIVE RECORDS</span></div><div class="toolbar printing-toolbar"><div class="search"><input id="printingSearch" placeholder="Search customer, job or model..."></div><select id="printingStatusFilter"><option value="">All statuses</option><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
-      <div class="table-wrap printing-table-wrap"><table class="printing-jobs-table"><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="11" class="empty">Loading...</td></tr></tbody></table></div>
+    <div class="panel printing-jobs-panel"><div class="printing-list-heading"><div><h3>Printing job records</h3><p>Track price, payments, filament and maintenance expenses</p></div><span class="printing-record-label">LIVE RECORDS</span></div><div class="toolbar printing-toolbar"><div class="search"><input id="printingSearch" placeholder="Search customer, job or model..."></div><select id="printingStatusFilter"><option value="">All statuses</option><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
+      <div class="table-wrap printing-table-wrap"><table class="printing-jobs-table"><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Final price</th><th>Filament cost</th><th>Maintenance</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="13" class="empty">Loading...</td></tr></tbody></table></div>
     </div>`;
   $("refreshPrintJobs").onclick=renderPrintingJobs;
-  const updateEstimate=()=>$("pjEstimate").textContent="Estimated total: "+money(Number($("pjWeight").value||0)*Number($("pjRate").value||0));
-  $("pjWeight").oninput=updateEstimate; $("pjRate").oninput=updateEstimate;
+  ["pjWeight","pjRate","pjDesignHours","pjDesignRate","pjManualPrice","pjFilamentCost","pjMaintenanceCost"].forEach(id=>$(id).addEventListener("input",updatePrintEstimate));
+  $("saveDesignRateDefault").onclick=()=>{const rate=Number($("pjDesignRate").value);if(!Number.isFinite(rate)||rate<0){atlAlert("Enter a valid non-negative hourly rate.");return;}localStorage.setItem("atl_print_design_hourly_rate",String(rate));showToast("Default design hourly rate saved on this browser.");};
+  updatePrintEstimate();
   $("printingSearch").oninput=drawPrintingJobs; $("printingStatusFilter").onchange=drawPrintingJobs;
   $("printingJobForm").onsubmit=savePrintingJob;
   await loadPrintingJobs();
@@ -3927,10 +3957,10 @@ async function renderPrintingJobs() {
 async function loadPrintingJobs() {
   let data;
   try { data=await fetchAllRows("printing_jobs", "*", q => q.eq("deleted",false).order("created_at",{ascending:false})); }
-  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Could not load jobs: ${escapeHTML(error.message)}. Check the Supabase SQL migration and RLS policies.</td></tr>`;return;}
+  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="13" class="empty">Could not load jobs: ${escapeHTML(error.message)}. Run the 3D printing finance SQL migration first.</td></tr>`;return;}
   printingJobsCache=data||[];
   try { const paid=await getJobPaidMap(printingJobsCache.map(x=>x.id)); printingJobsCache.forEach(x=>x._paid=paid[x.id]||0); }
-  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Payment data error: ${escapeHTML(error.message)}</td></tr>`;return;}
+  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="13" class="empty">Payment data error: ${escapeHTML(error.message)}</td></tr>`;return;}
   drawPrintingJobs();
 }
 
@@ -3939,11 +3969,14 @@ function drawPrintingJobs() {
   const term=($("printingSearch")?.value||"").toLowerCase().trim();
   const status=$("printingStatusFilter")?.value||"";
   const rows=printingJobsCache.filter(j=>(!status||j.status===status)&&[j.job_code,j.customer_name,j.model_name,j.material].join(" ").toLowerCase().includes(term));
-  if(!rows.length){$("printingJobsTable").innerHTML='<tr><td colspan="11" class="empty">No printing jobs found.</td></tr>';return;}
+  const all=printingJobsCache;
+  const estimate=all.reduce((a,j)=>a+Number(j.amount||0),0), earned=all.reduce((a,j)=>a+Number(j._paid||0),0);
+  const filament=all.reduce((a,j)=>a+Number(j.filament_cost||0),0), maintenance=all.reduce((a,j)=>a+Number(j.maintenance_cost||0),0), expenses=filament+maintenance;
+  [["printTotalEstimates",estimate],["printTotalEarned",earned],["printFilamentSpent",filament],["printMaintenanceSpent",maintenance],["printTotalExpenses",expenses],["printNetResult",earned-expenses]].forEach(([id,value])=>{if($(id))$(id).textContent=money(value);});
+  if(!rows.length){$("printingJobsTable").innerHTML='<tr><td colspan="13" class="empty">No printing jobs found.</td></tr>';return;}
   $("printingJobsTable").innerHTML=rows.map(j=>{
-    const total=Number(j.amount||Number(j.weight_grams||0)*Number(j.rate_per_gram||0));
-    const paid=Number(j._paid||0), balance=Math.max(0,total-paid), state=paymentState(total,paid);
-    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name)}</td><td>${escapeHTML(j.model_name)}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status)}</span></td><td><div class="actions"><button type="button" class="btn btn-success" data-job-payment="${escapeHTML(j.id)}" ${balance<=0?'disabled':''}>Add payment</button><button type="button" class="btn btn-outline" data-job-status="${escapeHTML(j.id)}">Status</button><button type="button" class="btn btn-danger" data-job-delete="${escapeHTML(j.id)}">Delete</button></div></td></tr>`;
+    const total=Number(j.amount||0), paid=Number(j._paid||0), balance=Math.max(0,total-paid), state=paymentState(total,paid);
+    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name||"—")}</td><td>${escapeHTML(j.model_name||"—")}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(j.filament_cost)}</td><td>${money(j.maintenance_cost)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status||"—")}</span></td><td><div class="actions"><button type="button" class="btn btn-success" data-job-payment="${escapeHTML(j.id)}" ${balance<=0?'disabled':''}>Add payment</button><button type="button" class="btn btn-outline" data-job-status="${escapeHTML(j.id)}">Status</button><button type="button" class="btn btn-danger" data-job-delete="${escapeHTML(j.id)}">Delete</button></div></td></tr>`;
   }).join("");
   $("printingJobsTable").querySelectorAll("[data-job-payment]").forEach(b=>b.onclick=()=>recordJobPayment(b.dataset.jobPayment));
   $("printingJobsTable").querySelectorAll("[data-job-status]").forEach(b=>b.onclick=()=>changeJobStatus(b.dataset.jobStatus));
@@ -3953,14 +3986,14 @@ function drawPrintingJobs() {
 async function savePrintingJob(event) {
   event.preventDefault(); const button=$("savePrintingJob"); button.disabled=true; button.textContent="Saving...";
   try {
-    const weight=Number($("pjWeight").value), rate=Number($("pjRate").value);
-    if(!Number.isFinite(weight)||weight<=0||!Number.isFinite(rate)||rate<0) throw new Error("Enter a valid positive weight and non-negative rate.");
-    const amount=Number((weight*rate).toFixed(2));
-    if(!Number.isFinite(amount)||amount>9999999999) throw new Error("Calculated job total is outside the supported range.");
-    const payload={customer_name:$("pjCustomer").value.trim(),model_name:$("pjModel").value.trim(),material:$("pjMaterial").value,colour:$("pjColour").value.trim(),weight_grams:weight,rate_per_gram:rate,amount,due_date:$("pjDue").value||null,status:$("pjStatus").value,notes:$("pjNotes").value.trim(),created_by:currentUser.id};
+    const x=calculatePrintQuote();
+    if(!Number.isFinite(x.weight)||x.weight<=0||!Number.isFinite(x.rate)||x.rate<0||!Number.isFinite(x.hours)||x.hours<0||!Number.isFinite(x.hourly)||x.hourly<0) throw new Error("Enter valid weight, printing rate, design hours and hourly rate.");
+    if(!Number.isFinite(x.filament)||x.filament<0||!Number.isFinite(x.maintenance)||x.maintenance<0||!Number.isFinite(x.total)||x.total<0) throw new Error("Costs and final price must be valid non-negative amounts.");
+    if(x.total>9999999999) throw new Error("Calculated job total is outside the supported range.");
+    const payload={customer_name:$("pjCustomer").value.trim(),model_name:$("pjModel").value.trim(),material:$("pjMaterial").value,colour:$("pjColour").value.trim(),weight_grams:x.weight,rate_per_gram:x.rate,design_hours:x.hours,design_hourly_rate:x.hourly,design_cost:Number(x.design.toFixed(2)),printing_charge:Number(x.print.toFixed(2)),calculated_amount:Number(x.calculated.toFixed(2)),manual_amount:x.manual===null?null:Number(x.manual.toFixed(2)),filament_cost:Number(x.filament.toFixed(2)),maintenance_cost:Number(x.maintenance.toFixed(2)),amount:Number(x.total.toFixed(2)),due_date:$("pjDue").value||null,status:$("pjStatus").value,notes:$("pjNotes").value.trim(),created_by:currentUser.id};
     const {error}=await db.from("printing_jobs").insert(payload); if(error) throw error;
-    $("printingJobForm").reset(); $("pjWeight").value=1; $("pjRate").value=5; $("pjEstimate").textContent="Estimated total: ₹5.00";
-    showToast("Printing job saved."); await loadPrintingJobs();
+    $("printingJobForm").reset(); $("pjWeight").value=1; $("pjRate").value=5; $("pjDesignHours").value=1; $("pjDesignRate").value=getPrintDefaultDesignRate(); $("pjFilamentCost").value=0; $("pjMaintenanceCost").value=0; updatePrintEstimate();
+    showToast("Printing job saved with price and expense details."); await loadPrintingJobs();
   } catch(error){$("pjError").textContent=error.message;}
   finally{button.disabled=false;button.textContent="Save print job";}
 }
