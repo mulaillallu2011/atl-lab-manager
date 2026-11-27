@@ -163,6 +163,68 @@ td{vertical-align:middle}
   .stat-number{font-size:24px}
   .form-grid{grid-template-columns:1fr}
 }
+
+/* CUSTOM PRINTING PAYMENT WINDOW */
+.payment-modal-backdrop{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.62);backdrop-filter:blur(5px)}
+.payment-modal{width:100%;max-width:500px;background:#fff;border:1px solid #e5e9f2;border-radius:20px;padding:25px;box-shadow:0 28px 90px #0f172a55;animation:dialogAppear .18s ease;max-height:calc(100vh - 36px);overflow:auto}
+.payment-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
+.payment-modal-head h2{margin:0 0 5px;font-size:21px;color:#172033}
+.payment-modal-head p{margin:0;color:#718096;font-size:13px}
+.payment-modal-close{border:0;background:#f1f5f9;color:#475569;border-radius:10px;width:36px;height:36px;font-size:20px}
+.payment-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:16px 0 20px}
+.payment-summary-card{background:#f8fafc;border:1px solid #e8edf5;border-radius:12px;padding:12px 10px;min-width:0}
+.payment-summary-card span{display:block;color:#64748b;font-size:11px;margin-bottom:5px}
+.payment-summary-card strong{display:block;color:#172033;font-size:15px;overflow-wrap:anywhere}
+.payment-modal .field{margin:13px 0}
+.payment-modal .field input,.payment-modal .field select{min-height:45px}
+.payment-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+.payment-modal-error{color:#dc2626;font-size:13px;min-height:18px;margin-top:8px}
+@media(max-width:430px){.payment-modal{padding:19px}.payment-summary{gap:6px}.payment-summary-card{padding:10px 7px}.payment-summary-card strong{font-size:13px}}
+
+
+/* =========================================================
+   3D PRINTING STUDIO — CLEAN, MODERN WORKSPACE STYLING
+   Presentation only: existing IDs, events and data logic stay intact.
+========================================================= */
+.printing-create-panel,.printing-jobs-panel{border:1px solid #e4e9f3;border-radius:18px;padding:22px;background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);box-shadow:0 8px 24px rgba(28,42,74,.045)}
+.printing-section-heading,.printing-list-heading{display:flex;align-items:center;gap:13px;margin-bottom:18px}
+.printing-section-heading h3,.printing-list-heading h3{margin:0 0 4px;font-size:17px;font-weight:750;letter-spacing:-.02em;color:#17243b}
+.printing-section-heading p,.printing-list-heading p{margin:0;color:#8190a7;font-size:12px}
+.printing-heading-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(135deg,#e9edff,#f1edff);color:#4f46e5;font-size:25px;font-weight:500}
+.printing-create-panel .module-form,.printing-create-panel form{margin-top:3px}
+.printing-create-panel .field label{color:#53627a;font-size:12px;font-weight:700}
+.printing-create-panel .field input,.printing-create-panel .field select,.printing-create-panel .field textarea{border-radius:11px;border-color:#dfe6f1;background:#fff;min-height:43px;transition:border-color .18s,box-shadow .18s}
+.printing-create-panel .field input:focus,.printing-create-panel .field select:focus,.printing-create-panel .field textarea:focus{border-color:#818cf8;box-shadow:0 0 0 4px rgba(99,102,241,.10)}
+#printingJobForm .notice,#pjEstimate{border:1px solid #dfe7ff;background:#f5f7ff;color:#4657a5;border-radius:12px;padding:13px 15px;font-weight:650}
+#printingJobForm #savePrintingJob{min-height:42px;padding:0 19px;border-radius:11px;box-shadow:0 5px 12px rgba(79,70,229,.18)}
+.printing-list-heading{justify-content:space-between;align-items:center;margin-bottom:17px}
+.printing-record-label{font-size:10px;font-weight:800;letter-spacing:.09em;color:#6675bb;background:#f0f2ff;border:1px solid #e2e6ff;padding:7px 10px;border-radius:30px;white-space:nowrap}
+.printing-toolbar{padding:11px;background:#f7f9fd;border:1px solid #edf0f6;border-radius:13px;margin-bottom:15px}
+.printing-toolbar .search input{height:43px;padding:0 14px;border:1px solid #e0e6f0;border-radius:10px;background:#fff;color:#25334b;box-shadow:0 1px 2px rgba(15,23,42,.02)}
+.printing-toolbar .search input:focus{outline:none;border-color:#818cf8;box-shadow:0 0 0 3px rgba(99,102,241,.10)}
+#printingStatusFilter{height:43px;min-width:132px;padding:0 32px 0 12px;border:1px solid #e0e6f0;border-radius:10px;background:#fff;color:#334155;font-size:13px}
+.printing-table-wrap{border:1px solid #e9edf4;border-radius:13px;overflow:auto;background:#fff}
+.printing-jobs-table{width:100%;min-width:980px;border-collapse:separate;border-spacing:0}
+.printing-jobs-table th{position:sticky;top:0;z-index:1;padding:14px 12px;background:#f7f8fc;color:#697891;border-bottom:1px solid #e7ebf3;font-size:11px;font-weight:800;letter-spacing:.035em;text-transform:uppercase;white-space:nowrap}
+.printing-jobs-table td{padding:15px 12px;border-bottom:1px solid #edf0f5;color:#394860;font-size:12px;white-space:nowrap}
+.printing-jobs-table tbody tr{transition:background .15s}
+.printing-jobs-table tbody tr:hover{background:#f8faff}
+.printing-jobs-table tbody tr:last-child td{border-bottom:0}
+.printing-jobs-table td:first-child strong{display:inline-flex;align-items:center;justify-content:center;min-width:76px;padding:7px 9px;border-radius:9px;background:#f0f2ff;color:#4855a7;font-size:11px;letter-spacing:.02em}
+.printing-jobs-table td:nth-child(6){font-weight:750;color:#26364f}
+.printing-jobs-table td:nth-child(7){font-weight:700;color:#07845e}
+.printing-jobs-table td:nth-child(8){font-weight:750;color:#c07816}
+.printing-jobs-table .tag{padding:6px 10px;border-radius:30px;background:#eef2ff;color:#4f46e5;font-size:10px;font-weight:800;white-space:nowrap}
+.printing-jobs-table .actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.printing-jobs-table .actions .btn{min-height:32px;padding:6px 10px;border-radius:9px;font-size:11px;font-weight:750;white-space:nowrap;transition:transform .15s,box-shadow .15s}
+.printing-jobs-table .actions .btn:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(15,23,42,.08)}
+.printing-jobs-table .actions .btn-success{background:#dcfceE;color:#087b57}
+.printing-jobs-table .actions .btn-outline{border-color:#dce3ee;color:#52627a}
+.printing-jobs-table .actions .btn-danger{background:#fff0f0;color:#c24141}
+.printing-jobs-table .actions .btn:disabled{opacity:.45;transform:none;box-shadow:none}
+.printing-jobs-table .empty{padding:38px 15px;color:#8290a5;font-size:13px}
+@media(max-width:700px){.printing-create-panel,.printing-jobs-panel{padding:15px;border-radius:14px}.printing-list-heading{align-items:flex-start}.printing-record-label{font-size:9px}.printing-toolbar{align-items:stretch}.printing-toolbar .search{flex-basis:100%}#printingStatusFilter{width:100%}.printing-section-heading p,.printing-list-heading p{line-height:1.5}}
+
 </style>
 </head>
 
@@ -3371,8 +3433,8 @@ async function getJobPaidMap(jobIds) {
 async function renderPrintingJobs() {
   $("pageContent").innerHTML = `
     <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, charges and customer payments.</p></div><button class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
-    <div class="panel">
-      <h3>Create print job</h3>
+    <div class="panel printing-create-panel">
+      <div class="printing-section-heading"><span class="printing-heading-icon">＋</span><div><h3>Create print job</h3><p>Add a new 3D printed part and calculate its price</p></div></div>
       <form id="printingJobForm"><div class="form-grid">
         <div class="field"><label>Customer / Student *</label><input id="pjCustomer" required maxlength="150" placeholder="Customer name"></div>
         <div class="field"><label>Model / Part name *</label><input id="pjModel" required maxlength="150" placeholder="Part name"></div>
@@ -3385,8 +3447,8 @@ async function renderPrintingJobs() {
         <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="pjNotes" rows="2"></textarea></div>
       </div><div class="notice" id="pjEstimate">Estimated total: ₹5.00</div><button class="btn btn-primary" type="submit" id="savePrintingJob">Save print job</button><div id="pjError" class="error"></div></form>
     </div>
-    <div class="panel"><div class="toolbar"><div class="search"><input id="printingSearch" placeholder="Search customer, job or model..."></div><select id="printingStatusFilter"><option value="">All statuses</option><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
-      <div class="table-wrap"><table><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="11" class="empty">Loading...</td></tr></tbody></table></div>
+    <div class="panel printing-jobs-panel"><div class="printing-list-heading"><div><h3>Printing job records</h3><p>Track progress, payments and customer balances</p></div><span class="printing-record-label">LIVE RECORDS</span></div><div class="toolbar printing-toolbar"><div class="search"><input id="printingSearch" placeholder="Search customer, job or model..."></div><select id="printingStatusFilter"><option value="">All statuses</option><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
+      <div class="table-wrap printing-table-wrap"><table class="printing-jobs-table"><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="11" class="empty">Loading...</td></tr></tbody></table></div>
     </div>`;
   $("refreshPrintJobs").onclick=renderPrintingJobs;
   const updateEstimate=()=>$("pjEstimate").textContent="Estimated total: "+money(Number($("pjWeight").value||0)*Number($("pjRate").value||0));
@@ -3432,20 +3494,65 @@ async function savePrintingJob(event) {
 }
 
 async function recordJobPayment(jobId) {
-  const job=printingJobsCache.find(x=>String(x.id)===String(jobId)); if(!job)return;
+  const job=printingJobsCache.find(x=>String(x.id)===String(jobId));
+  if(!job)return;
   const total=Number(job.amount||Number(job.weight_grams||0)*Number(job.rate_per_gram||0));
   const paid=Number(job._paid||0), balance=Math.max(0,total-paid);
-  const amountText=prompt(`Job ${job.job_code||""}\nTotal: ${money(total)}\nPaid: ${money(paid)}\nBalance: ${money(balance)}\n\nEnter amount received:`);
-  if(amountText===null)return;
-  const amount=Number(amountText); if(!Number.isFinite(amount)||amount<=0||amount>balance){await atlAlert("Enter an amount greater than zero and not more than the remaining balance.","Invalid amount","⚠");return;}
-  const method=prompt("Payment method: enter GPay, Cash or Other","GPay"); if(method===null)return;
-  const normalized=["gpay","cash","other"].find(x=>x.toLowerCase()===method.trim().toLowerCase());
-  if(!normalized){await atlAlert("Choose GPay, Cash or Other.","Invalid method","⚠");return;}
-  const receiver=prompt("Received by:","Lab Admin"); if(receiver===null)return;
-  try { const {error}=await db.from("atl_payments").insert({printing_job_id:job.id,customer_name:job.customer_name,amount:Number(amount.toFixed(2)),payment_method:normalized.toUpperCase()==="GPAY"?"GPay":normalized[0].toUpperCase()+normalized.slice(1),received_by:receiver.trim()||"Lab Admin",payment_date:todayLocal(),created_by:currentUser.id,deleted:false}); if(error)throw error; showToast("Payment recorded."); await loadPrintingJobs(); }
-  catch(error){await atlAlert("Could not save payment: "+error.message,"Payment error","⚠");}
-}
+  if(balance<=0){await atlAlert("This job is already fully paid.","No balance due","ℹ");return;}
 
+  const oldModal=document.getElementById("printingPaymentModal");
+  if(oldModal)oldModal.remove();
+  const modal=document.createElement("div");
+  modal.id="printingPaymentModal";
+  modal.className="payment-modal-backdrop";
+  modal.innerHTML=`
+    <form class="payment-modal" id="printingPaymentForm" role="dialog" aria-modal="true" aria-labelledby="printingPaymentTitle">
+      <div class="payment-modal-head">
+        <div><h2 id="printingPaymentTitle">Add Payment</h2><p>Record money received for this 3D printing job</p></div>
+        <button type="button" class="payment-modal-close" id="closePrintingPayment" aria-label="Close">×</button>
+      </div>
+      <div class="payment-summary">
+        <div class="payment-summary-card"><span>Job number</span><strong>${escapeHTML(job.job_code||String(job.id).slice(0,8))}</strong></div>
+        <div class="payment-summary-card"><span>Total amount</span><strong>${money(total)}</strong></div>
+        <div class="payment-summary-card"><span>Balance due</span><strong>${money(balance)}</strong></div>
+      </div>
+      <div class="field"><label for="jobPaymentAmount">Amount received (₹) *</label><input id="jobPaymentAmount" type="number" min="0.01" max="${balance.toFixed(2)}" step="0.01" placeholder="Enter amount" required autofocus></div>
+      <div class="field"><label for="jobPaymentMethod">Payment method *</label><select id="jobPaymentMethod" required><option value="GPay">GPay</option><option value="Cash">Cash</option></select></div>
+      <div class="field"><label for="jobPaymentReceiver">Received by</label><input id="jobPaymentReceiver" type="text" maxlength="100" value="Lab Admin" placeholder="Name of receiver"></div>
+      <div class="payment-modal-error" id="jobPaymentError" role="alert"></div>
+      <div class="payment-modal-actions"><button type="button" class="btn btn-outline" id="cancelPrintingPayment">Cancel</button><button type="submit" class="btn btn-primary" id="savePrintingPayment">Save payment</button></div>
+    </form>`;
+  document.body.appendChild(modal);
+  const form=modal.querySelector("#printingPaymentForm");
+  const amountInput=modal.querySelector("#jobPaymentAmount");
+  const errorBox=modal.querySelector("#jobPaymentError");
+  let onEscape=null;
+  const close=()=>{modal.remove();if(onEscape)document.removeEventListener("keydown",onEscape);};
+  modal.querySelector("#closePrintingPayment").onclick=close;
+  modal.querySelector("#cancelPrintingPayment").onclick=close;
+  modal.addEventListener("click",event=>{if(event.target===modal)close();});
+  onEscape=event=>{if(event.key==="Escape"&&document.body.contains(modal))close();};
+  document.addEventListener("keydown",onEscape);
+  form.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const amount=Number(amountInput.value);
+    const method=modal.querySelector("#jobPaymentMethod").value;
+    const receiver=modal.querySelector("#jobPaymentReceiver").value.trim()||"Lab Admin";
+    if(!Number.isFinite(amount)||amount<=0||amount>balance){errorBox.textContent=`Enter an amount from ₹0.01 up to ${money(balance)}.`;amountInput.focus();return;}
+    const saveButton=modal.querySelector("#savePrintingPayment");
+    saveButton.disabled=true;saveButton.textContent="Saving...";errorBox.textContent="";
+    try{
+      const {error}=await db.from("atl_payments").insert({printing_job_id:job.id,customer_name:job.customer_name,amount:Number(amount.toFixed(2)),payment_method:method,received_by:receiver,payment_date:todayLocal(),created_by:currentUser.id,deleted:false});
+      if(error)throw error;
+      document.removeEventListener("keydown",onEscape);
+      close();showToast("Payment recorded successfully.");await loadPrintingJobs();
+    }catch(error){
+      errorBox.textContent="Could not save payment: "+error.message;
+      saveButton.disabled=false;saveButton.textContent="Save payment";
+    }
+  });
+  setTimeout(()=>amountInput.focus(),50);
+}
 async function changeJobStatus(jobId) {
   const job=printingJobsCache.find(x=>String(x.id)===String(jobId)); if(!job)return;
   const status=prompt("Enter status: Queued, Printing, Completed, Failed or Cancelled",job.status||"Queued"); if(status===null)return;
