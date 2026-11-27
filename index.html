@@ -1,20 +1,20 @@
 
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#111827">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ATL Lab Manager">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="#111827" name="theme-color"/>
+<meta content="yes" name="mobile-web-app-capable"/>
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
+<meta content="ATL Lab Manager" name="apple-mobile-web-app-title"/>
+<link href="./manifest.webmanifest" rel="manifest"/>
+<link href="./icons/icon-192.png" rel="icon" sizes="192x192" type="image/png"/>
+<link href="./icons/icon-192.png" rel="apple-touch-icon"/>
 <title>ATL Lab Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 :root {
   --bg:#f4f6fb;
@@ -225,354 +225,340 @@ td{vertical-align:middle}
 .printing-jobs-table .empty{padding:38px 15px;color:#8290a5;font-size:13px}
 @media(max-width:700px){.printing-create-panel,.printing-jobs-panel{padding:15px;border-radius:14px}.printing-list-heading{align-items:flex-start}.printing-record-label{font-size:9px}.printing-toolbar{align-items:stretch}.printing-toolbar .search{flex-basis:100%}#printingStatusFilter{width:100%}.printing-section-heading p,.printing-list-heading p{line-height:1.5}}
 
+/* Audit hardening and accessibility */
+:focus-visible{outline:3px solid rgba(79,70,229,.55);outline-offset:2px}
+button:disabled{pointer-events:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media(max-width:700px){.content{padding:16px 12px}.page-heading h1{font-size:21px}.toolbar>.btn{flex:1 1 auto}.modal{max-height:calc(100dvh - 24px);padding:16px}.modal-actions{flex-wrap:wrap}.modal-actions .btn{flex:1}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 </style>
 </head>
-
 <body>
-
 <!-- LOGIN -->
-<section id="loginPage" class="login-page">
-  <div class="login-card">
-    <div class="logo">ATL</div>
-    <h1>ATL Lab Manager</h1>
-    <p>Sign in to manage your innovation lab.</p>
-    <form id="loginForm">
-      <div class="field">
-        <label>Email address</label>
-        <input id="loginEmail" type="email" required placeholder="Enter your Supabase email">
-      </div>
-      <div class="field">
-        <label>Password</label>
-        <input id="loginPassword" type="password" required placeholder="Enter your password">
-      </div>
-      <button class="btn btn-primary btn-block" id="loginButton">Sign in</button>
-      <div id="loginError" class="error"></div>
-    </form>
-    <p class="small">ATL Lab Manager · Secure access</p>
-  </div>
+<section class="login-page" id="loginPage">
+<div class="login-card">
+<div class="logo">ATL</div>
+<h1>ATL Lab Manager</h1>
+<p>Sign in to manage your innovation lab.</p>
+<form id="loginForm">
+<div class="field">
+<label>Email address</label>
+<input id="loginEmail" placeholder="Enter your Supabase email" required="" type="email"/>
+</div>
+<div class="field">
+<label>Password</label>
+<input id="loginPassword" placeholder="Enter your password" required="" type="password"/>
+</div>
+<button class="btn btn-primary btn-block" id="loginButton" type="submit">Sign in</button>
+<div class="error" id="loginError"></div>
+</form>
+<p class="small">ATL Lab Manager · Secure access</p>
+</div>
 </section>
-
 <!-- MAIN APP -->
-<div id="appPage" class="app hidden">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-icon">A</div>
-      <div><strong>ATL LAB</strong><small>Management System</small></div>
-    </div>
-
-    <div class="nav-label">WORKSPACE</div>
-    <button class="nav-btn active" data-page="Dashboard"><span class="nav-icon">▦</span> Dashboard</button>
-    <button class="nav-btn" data-page="Students"><span class="nav-icon">♙</span> Students</button>
-    <button class="nav-btn" data-page="Projects"><span class="nav-icon">◈</span> Projects</button>
-    <button class="nav-btn" data-page="Components"><span class="nav-icon">▣</span> Components</button>
-    <button class="nav-btn" data-page="Issue / Return"><span class="nav-icon">⇄</span> Issue / Return</button>
-
-    <div class="nav-label">OPERATIONS</div>
-    <button class="nav-btn" data-page="3D Printing"><span class="nav-icon">▤</span> 3D Printing</button>
-    <button class="nav-btn" data-page="Payments"><span class="nav-icon">₹</span> Payments</button>
-    <button class="nav-btn" data-page="Reports"><span class="nav-icon">▥</span> Reports</button>
-
-    <div class="nav-label">SYSTEM</div>
-    <button class="nav-btn" data-page="Trash"><span class="nav-icon">▤</span> Trash</button>
-    <button class="nav-btn" data-page="Settings" id="settingsNav"><span class="nav-icon">⚙</span> Settings</button>
-
-    <div class="sidebar-bottom">
-      <button class="nav-btn" id="logoutButton"><span class="nav-icon">↪</span> Sign out</button>
-    </div>
-  </aside>
-
-  <main class="main">
-    <header class="topbar">
-      <div class="topbar-right">
-        <button class="btn btn-outline mobile-menu" id="mobileMenu">☰</button>
-        <strong id="topTitle">Dashboard</strong>
-      </div>
-      <div class="topbar-right">
-        <button class="btn btn-outline hidden" id="installAppButton" type="button">＋ Install App</button>
-        <span class="role-pill" id="roleLabel">User</span>
-        <span id="userLabel" class="small muted"></span>
-      </div>
-    </header>
-    <div class="content" id="pageContent"></div>
-  </main>
+<div class="app hidden" id="appPage">
+<aside class="sidebar" id="sidebar">
+<div class="brand">
+<div class="brand-icon">A</div>
+<div><strong>ATL LAB</strong><small>Management System</small></div>
 </div>
-
+<div class="nav-label">WORKSPACE</div>
+<button class="nav-btn active" data-page="Dashboard" type="button"><span class="nav-icon">▦</span> Dashboard</button>
+<button class="nav-btn" data-page="Students" type="button"><span class="nav-icon">♙</span> Students</button>
+<button class="nav-btn" data-page="Projects" type="button"><span class="nav-icon">◈</span> Projects</button>
+<button class="nav-btn" data-page="Components" type="button"><span class="nav-icon">▣</span> Components</button>
+<button class="nav-btn" data-page="Issue / Return" type="button"><span class="nav-icon">⇄</span> Issue / Return</button>
+<div class="nav-label">OPERATIONS</div>
+<button class="nav-btn" data-page="3D Printing" type="button"><span class="nav-icon">▤</span> 3D Printing</button>
+<button class="nav-btn" data-page="Payments" type="button"><span class="nav-icon">₹</span> Payments</button>
+<button class="nav-btn" data-page="Reports" type="button"><span class="nav-icon">▥</span> Reports</button>
+<div class="nav-label">SYSTEM</div>
+<button class="nav-btn" data-page="Trash" type="button"><span class="nav-icon">▤</span> Trash</button>
+<button class="nav-btn" data-page="Settings" id="settingsNav" type="button"><span class="nav-icon">⚙</span> Settings</button>
+<div class="sidebar-bottom">
+<button class="nav-btn" id="logoutButton" type="button"><span class="nav-icon">↪</span> Sign out</button>
+</div>
+</aside>
+<main class="main">
+<header class="topbar">
+<div class="topbar-right">
+<button class="btn btn-outline mobile-menu" id="mobileMenu" type="button">☰</button>
+<strong id="topTitle">Dashboard</strong>
+</div>
+<div class="topbar-right">
+<button class="btn btn-outline hidden" id="installAppButton" type="button">＋ Install App</button>
+<span class="role-pill" id="roleLabel">User</span>
+<span class="small muted" id="userLabel"></span>
+</div>
+</header>
+<div class="content" id="pageContent"></div>
+</main>
+</div>
 <!-- STUDENT MODAL -->
-<div id="studentModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="modalTitle">Add Student</h2>
-      <button class="btn btn-outline" id="closeModal">✕</button>
-    </div>
-    <div class="notice">Student ID must be unique. Use a new ID for every student.</div>
-    <form id="studentForm">
-      <div class="form-grid">
-        <div class="field"><label>Student ID *</label><input id="studentId" required placeholder="e.g. ATL-001"></div>
-        <div class="field"><label>Student Name *</label><input id="studentName" required placeholder="Full name"></div>
-        <div class="field"><label>Class</label><input id="studentClass" placeholder="e.g. Class 6"></div><div class="field"><label>Batch</label><input id="studentBatch" placeholder="e.g. Robotics Batch A"></div><div class="field"><label>Total Course Fee (₹)</label><input id="studentFee" type="number" min="0" step="0.01" placeholder="0.00"></div>
-        <div class="field"><label>Student Phone</label><input id="studentPhone" placeholder="Phone number"></div>
-        <div class="field"><label>Parent Phone</label><input id="parentPhone" placeholder="Parent phone"></div>
-        <div class="field"><label>Email</label><input id="studentEmail" type="email" placeholder="Email address"></div>
-        <div class="field" style="grid-column:1/-1"><label>Interests</label><textarea id="studentInterests" rows="3" placeholder="Robotics, Arduino, AI..."></textarea></div>
-        <div class="field"><label>Record Date</label><input id="studentDate" type="date"></div>
-      </div>
-      <div id="studentFormError" class="error"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" id="cancelModal">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="saveStudentButton">Save Student</button>
-      </div>
-    </form>
-  </div>
+<div class="modal-backdrop hidden" id="studentModal">
+<div class="modal">
+<div class="modal-head">
+<h2 id="modalTitle">Add Student</h2>
+<button class="btn btn-outline" id="closeModal" type="button">✕</button>
 </div>
-
+<div class="notice">Student ID must be unique. Use a new ID for every student.</div>
+<form id="studentForm">
+<div class="form-grid">
+<div class="field"><label>Student ID *</label><input id="studentId" placeholder="e.g. ATL-001" required=""/></div>
+<div class="field"><label>Student Name *</label><input id="studentName" placeholder="Full name" required=""/></div>
+<div class="field"><label>Class</label><input id="studentClass" placeholder="e.g. Class 6"/></div><div class="field"><label>Batch</label><input id="studentBatch" placeholder="e.g. Robotics Batch A"/></div><div class="field"><label>Total Course Fee (₹)</label><input id="studentFee" min="0" placeholder="0.00" step="0.01" type="number"/></div>
+<div class="field"><label>Student Phone</label><input id="studentPhone" placeholder="Phone number"/></div>
+<div class="field"><label>Parent Phone</label><input id="parentPhone" placeholder="Parent phone"/></div>
+<div class="field"><label>Email</label><input id="studentEmail" placeholder="Email address" type="email"/></div>
+<div class="field" style="grid-column:1/-1"><label>Interests</label><textarea id="studentInterests" placeholder="Robotics, Arduino, AI..." rows="3"></textarea></div>
+<div class="field"><label>Record Date</label><input id="studentDate" type="date"/></div>
+</div>
+<div class="error" id="studentFormError"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="cancelModal" type="button">Cancel</button>
+<button class="btn btn-primary" id="saveStudentButton" type="submit">Save Student</button>
+</div>
+</form>
+</div>
+</div>
 <!-- STUDENT DETAILS -->
-<div id="viewModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2>Student Details</h2>
-      <button class="btn btn-outline" id="closeView">✕</button>
-    </div>
-    <div id="studentDetails"></div>
-  </div>
+<div class="modal-backdrop hidden" id="viewModal">
+<div class="modal">
+<div class="modal-head">
+<h2>Student Details</h2>
+<button class="btn btn-outline" id="closeView" type="button">✕</button>
 </div>
-
+<div id="studentDetails"></div>
+</div>
+</div>
 <!-- CSV MODAL -->
-<div id="csvModal" class="modal-backdrop hidden">
-  <div class="modal" style="max-width:950px">
-    <div class="modal-head">
-      <h2>Import Students from CSV</h2>
-      <button class="btn btn-outline" id="closeCsvModal">✕</button>
-    </div>
-    <div class="notice">Required columns: Student ID and Student Name. Optional: Class, Batch, Total Fee, Student Phone, Parent Phone, Email, Interests, Record Date.</div>
-    <div class="csv-file" id="csvDropZone">
-      <div style="font-size:35px">📄</div>
-      <h3>Upload your student CSV</h3>
-      <p class="small muted">Choose a CSV file or drag it into this area.</p>
-      <input type="file" id="csvFile" accept=".csv,text/csv" hidden>
-      <button type="button" class="btn btn-primary" id="chooseCsvButton">Choose CSV File</button>
-      <p id="csvSelectedName" class="small muted">No file selected</p>
-      <button type="button" class="btn btn-outline" id="downloadCsvTemplate">Download CSV Template</button>
-    </div>
-    <div id="csvStatus" class="csv-status muted">No file selected.</div>
-    <div id="csvPreview" class="csv-preview hidden">
-      <table><thead id="csvPreviewHead"></thead><tbody id="csvPreviewBody"></tbody></table>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" id="cancelCsv">Cancel</button>
-      <button class="btn btn-primary" id="importCsvButton" disabled>Import Students</button>
-    </div>
-  </div>
+<div class="modal-backdrop hidden" id="csvModal">
+<div class="modal" style="max-width:950px">
+<div class="modal-head">
+<h2>Import Students from CSV</h2>
+<button class="btn btn-outline" id="closeCsvModal" type="button">✕</button>
 </div>
-
+<div class="notice">Required columns: Student ID and Student Name. Optional: Class, Batch, Total Fee, Student Phone, Parent Phone, Email, Interests, Record Date.</div>
+<div class="csv-file" id="csvDropZone">
+<div style="font-size:35px">📄</div>
+<h3>Upload your student CSV</h3>
+<p class="small muted">Choose a CSV file or drag it into this area.</p>
+<input accept=".csv,text/csv" hidden="" id="csvFile" type="file"/>
+<button class="btn btn-primary" id="chooseCsvButton" type="button">Choose CSV File</button>
+<p class="small muted" id="csvSelectedName">No file selected</p>
+<button class="btn btn-outline" id="downloadCsvTemplate" type="button">Download CSV Template</button>
+</div>
+<div class="csv-status muted" id="csvStatus">No file selected.</div>
+<div class="csv-preview hidden" id="csvPreview">
+<table><thead id="csvPreviewHead"></thead><tbody id="csvPreviewBody"></tbody></table>
+</div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="cancelCsv" type="button">Cancel</button>
+<button class="btn btn-primary" disabled="" id="importCsvButton" type="button">Import Students</button>
+</div>
+</div>
+</div>
 <!-- PROJECT MODAL -->
-<div id="projectModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="projectModalTitle">Add Project</h2>
-      <button class="btn btn-outline" id="closeProjectModal">✕</button>
-    </div>
-    <div class="notice">Enter project information below. You can edit these details later.</div>
-    <form id="projectForm">
-      <div class="form-grid">
-        <div class="field" style="grid-column:1/-1">
-          <label>Project Name *</label>
-          <input id="projectName" required maxlength="150" placeholder="e.g. Smart Irrigation System">
-        </div>
-        <div class="field">
-          <label>Assign Student</label>
-          <select id="projectStudent"><option value="">Not assigned</option></select>
-        </div>
-        <div class="field">
-          <label>Mentor</label>
-          <input id="projectMentor" placeholder="Mentor name">
-        </div>
-        <div class="field">
-          <label>Start Date</label>
-          <input id="projectStartDate" type="date">
-        </div>
-        <div class="field">
-          <label>Target Date</label>
-          <input id="projectTargetDate" type="date">
-        </div>
-        <div class="field">
-          <label>Budget</label>
-          <input id="projectBudget" type="number" min="0" step="0.01" placeholder="0.00">
-        </div>
-        <div class="field">
-          <label>Status</label>
-          <select id="projectStatus">
-            <option>Planning</option>
-            <option>In Progress</option>
-            <option>On Hold</option>
-            <option>Completed</option>
-            <option>Cancelled</option>
-          </select>
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label>Description</label>
-          <textarea id="projectDescription" rows="4" placeholder="Describe the project..."></textarea>
-        </div>
-      </div>
-      <div id="projectFormError" class="error"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" id="cancelProjectModal">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="saveProjectButton">Save Project</button>
-      </div>
-    </form>
-  </div>
+<div class="modal-backdrop hidden" id="projectModal">
+<div class="modal">
+<div class="modal-head">
+<h2 id="projectModalTitle">Add Project</h2>
+<button class="btn btn-outline" id="closeProjectModal" type="button">✕</button>
 </div>
-
+<div class="notice">Enter project information below. You can edit these details later.</div>
+<form id="projectForm">
+<div class="form-grid">
+<div class="field" style="grid-column:1/-1">
+<label>Project Name *</label>
+<input id="projectName" maxlength="150" placeholder="e.g. Smart Irrigation System" required=""/>
+</div>
+<div class="field">
+<label>Assign Student</label>
+<select id="projectStudent"><option value="">Not assigned</option></select>
+</div>
+<div class="field">
+<label>Mentor</label>
+<input id="projectMentor" placeholder="Mentor name"/>
+</div>
+<div class="field">
+<label>Start Date</label>
+<input id="projectStartDate" type="date"/>
+</div>
+<div class="field">
+<label>Target Date</label>
+<input id="projectTargetDate" type="date"/>
+</div>
+<div class="field">
+<label>Budget</label>
+<input id="projectBudget" min="0" placeholder="0.00" step="0.01" type="number"/>
+</div>
+<div class="field">
+<label>Status</label>
+<select id="projectStatus">
+<option>Planning</option>
+<option>In Progress</option>
+<option>On Hold</option>
+<option>Completed</option>
+<option>Cancelled</option>
+</select>
+</div>
+<div class="field" style="grid-column:1/-1">
+<label>Description</label>
+<textarea id="projectDescription" placeholder="Describe the project..." rows="4"></textarea>
+</div>
+</div>
+<div class="error" id="projectFormError"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="cancelProjectModal" type="button">Cancel</button>
+<button class="btn btn-primary" id="saveProjectButton" type="submit">Save Project</button>
+</div>
+</form>
+</div>
+</div>
 <!-- PROJECT DETAILS -->
-<div id="projectViewModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2>Project Details</h2>
-      <button class="btn btn-outline" id="closeProjectView">✕</button>
-    </div>
-    <div id="projectDetails"></div>
-  </div>
+<div class="modal-backdrop hidden" id="projectViewModal">
+<div class="modal">
+<div class="modal-head">
+<h2>Project Details</h2>
+<button class="btn btn-outline" id="closeProjectView" type="button">✕</button>
 </div>
-
+<div id="projectDetails"></div>
+</div>
+</div>
 <!-- COMPONENT MODAL -->
-<div id="componentModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="componentModalTitle">Add Component</h2>
-      <button class="btn btn-outline" id="closeComponentModal">✕</button>
-    </div>
-    <div class="notice">
+<div class="modal-backdrop hidden" id="componentModal">
+<div class="modal">
+<div class="modal-head">
+<h2 id="componentModalTitle">Add Component</h2>
+<button class="btn btn-outline" id="closeComponentModal" type="button">✕</button>
+</div>
+<div class="notice">
       Add the component name, optional code and opening quantity. Stock adjustments will be added in a later version.
     </div>
-    <form id="componentForm">
-      <div class="field">
-        <label>Component Name *</label>
-        <input id="componentName" required maxlength="150" placeholder="e.g. Red LED">
-      </div>
-      <div class="field">
-        <label>Component Code / SKU</label>
-        <input id="componentCode" maxlength="80" placeholder="e.g. LED-RED-001">
-      </div>
-      <div class="field">
-        <label id="componentTotalLabel">Opening Quantity *</label>
-        <input id="componentTotalQuantity" type="number" min="0" step="1" value="0" required>
-      </div>
-      <div class="field">
-        <label>Low Stock Warning Level</label>
-        <input id="componentMinimumStock" type="number" min="0" step="1" value="0">
-      </div>
-      <div id="componentFormError" class="error"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" id="cancelComponentModal">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="saveComponentButton">Save Component</button>
-      </div>
-    </form>
-  </div>
+<form id="componentForm">
+<div class="field">
+<label>Component Name *</label>
+<input id="componentName" maxlength="150" placeholder="e.g. Red LED" required=""/>
 </div>
-
+<div class="field">
+<label>Component Code / SKU</label>
+<input id="componentCode" maxlength="80" placeholder="e.g. LED-RED-001"/>
+</div>
+<div class="field">
+<label id="componentTotalLabel">Opening Quantity *</label>
+<input id="componentTotalQuantity" min="0" required="" step="1" type="number" value="0"/>
+</div>
+<div class="field">
+<label>Low Stock Warning Level</label>
+<input id="componentMinimumStock" min="0" step="1" type="number" value="0"/>
+</div>
+<div class="error" id="componentFormError"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="cancelComponentModal" type="button">Cancel</button>
+<button class="btn btn-primary" id="saveComponentButton" type="submit">Save Component</button>
+</div>
+</form>
+</div>
+</div>
 <!-- ISSUE MODAL -->
-<div id="issueModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2>Record Component Issue</h2>
-      <button type="button" class="btn btn-outline" id="closeIssueModal">✕</button>
-    </div>
-    <div class="notice">Record which ATL student took a component and when. This register does not deduct stock.</div>
-    <form id="issueForm">
-      <div class="field">
-        <label>Component *</label>
-        <select id="issueComponent" required><option value="">Loading components...</option></select>
-      </div>
-      <div class="field">
-        <label>ATL Student *</label>
-        <select id="issueStudent" required><option value="">Loading students...</option></select>
-      </div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Quantity Taken *</label>
-          <input id="issueQuantity" type="number" min="1" step="1" required value="1">
-        </div>
-        <div class="field">
-          <label>Date Taken *</label>
-          <input id="issueDate" type="date" required>
-        </div>
-      </div>
-      <div class="field">
-        <label>Notes</label>
-        <textarea id="issueNotes" rows="3" placeholder="Optional notes..."></textarea>
-      </div>
-      <div id="issueFormError" class="error"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" id="cancelIssueModal">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="saveIssueButton">Save Record</button>
-      </div>
-    </form>
-  </div>
+<div class="modal-backdrop hidden" id="issueModal">
+<div class="modal">
+<div class="modal-head">
+<h2>Record Component Issue</h2>
+<button class="btn btn-outline" id="closeIssueModal" type="button">✕</button>
 </div>
-
+<div class="notice">Record which ATL student took a component and when. This register does not deduct stock.</div>
+<form id="issueForm">
+<div class="field">
+<label>Component *</label>
+<select id="issueComponent" required=""><option value="">Loading components...</option></select>
+</div>
+<div class="field">
+<label>ATL Student *</label>
+<select id="issueStudent" required=""><option value="">Loading students...</option></select>
+</div>
+<div class="form-grid">
+<div class="field">
+<label>Quantity Taken *</label>
+<input id="issueQuantity" min="1" required="" step="1" type="number" value="1"/>
+</div>
+<div class="field">
+<label>Date Taken *</label>
+<input id="issueDate" required="" type="date"/>
+</div>
+</div>
+<div class="field">
+<label>Notes</label>
+<textarea id="issueNotes" placeholder="Optional notes..." rows="3"></textarea>
+</div>
+<div class="error" id="issueFormError"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="cancelIssueModal" type="button">Cancel</button>
+<button class="btn btn-primary" id="saveIssueButton" type="submit">Save Record</button>
+</div>
+</form>
+</div>
+</div>
 <!-- RETURN MODAL -->
-<div id="returnModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2>Record Component Return</h2>
-      <button class="btn btn-outline" id="closeReturnModal">✕</button>
-    </div>
-    <div id="returnIssueInfo" class="notice"></div>
-    <form id="returnForm">
-      <div class="field">
-        <label>Quantity Being Returned *</label>
-        <input id="returnQuantity" type="number" min="1" step="1" required>
-      </div>
-      <div class="field">
-        <label>Return Date *</label>
-        <input id="returnDate" type="date" required>
-      </div>
-      <div class="field">
-        <label>Notes</label>
-        <textarea id="returnNotes" rows="3" placeholder="Optional return notes..."></textarea>
-      </div>
-      <div id="returnFormError" class="error"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" id="cancelReturnModal">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="saveReturnButton">Save Return</button>
-      </div>
-    </form>
-  </div>
+<div class="modal-backdrop hidden" id="returnModal">
+<div class="modal">
+<div class="modal-head">
+<h2>Record Component Return</h2>
+<button class="btn btn-outline" id="closeReturnModal" type="button">✕</button>
 </div>
-
+<div class="notice" id="returnIssueInfo"></div>
+<form id="returnForm">
+<div class="field">
+<label>Quantity Being Returned *</label>
+<input id="returnQuantity" min="1" required="" step="1" type="number"/>
+</div>
+<div class="field">
+<label>Return Date *</label>
+<input id="returnDate" required="" type="date"/>
+</div>
+<div class="field">
+<label>Notes</label>
+<textarea id="returnNotes" placeholder="Optional return notes..." rows="3"></textarea>
+</div>
+<div class="error" id="returnFormError"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="cancelReturnModal" type="button">Cancel</button>
+<button class="btn btn-primary" id="saveReturnButton" type="submit">Save Return</button>
+</div>
+</form>
+</div>
+</div>
 <!-- RETURN HISTORY MODAL -->
-<div id="issueHistoryModal" class="modal-backdrop hidden">
-  <div class="modal" style="max-width:750px">
-    <div class="modal-head">
-      <h2>Return History</h2>
-      <button class="btn btn-outline" id="closeIssueHistoryModal">✕</button>
-    </div>
-    <div id="issueHistoryInfo" class="notice"></div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Return Date</th><th>Quantity Returned</th><th>Notes</th></tr>
-        </thead>
-        <tbody id="issueHistoryTable"></tbody>
-      </table>
-    </div>
-  </div>
+<div class="modal-backdrop hidden" id="issueHistoryModal">
+<div class="modal" style="max-width:750px">
+<div class="modal-head">
+<h2>Return History</h2>
+<button class="btn btn-outline" id="closeIssueHistoryModal" type="button">✕</button>
 </div>
-
+<div class="notice" id="issueHistoryInfo"></div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Return Date</th><th>Quantity Returned</th><th>Notes</th></tr>
+</thead>
+<tbody id="issueHistoryTable"></tbody>
+</table>
+</div>
+</div>
+</div>
 <!-- CONFIRMATION DIALOG -->
-<div id="dialogModal" class="dialog-backdrop hidden">
-  <div class="dialog-box">
-    <div class="dialog-icon" id="dialogIcon">!</div>
-    <h2 id="dialogTitle">Confirm action</h2>
-    <p id="dialogMessage"></p>
-    <div class="dialog-actions">
-      <button class="btn btn-outline hidden" id="dialogCancel">Cancel</button>
-      <button class="btn btn-primary" id="dialogConfirm">Continue</button>
-    </div>
-  </div>
+<div class="dialog-backdrop hidden" id="dialogModal">
+<div class="dialog-box">
+<div class="dialog-icon" id="dialogIcon">!</div>
+<h2 id="dialogTitle">Confirm action</h2>
+<p id="dialogMessage"></p>
+<div class="dialog-actions">
+<button class="btn btn-outline hidden" id="dialogCancel" type="button">Cancel</button>
+<button class="btn btn-primary" id="dialogConfirm" type="button">Continue</button>
 </div>
-
-<div id="toast" class="toast hidden"></div>
-
+</div>
+</div>
+<div class="toast hidden" id="toast"></div>
 <script>
 /* =========================================================
    SUPABASE CONFIGURATION
@@ -610,6 +596,29 @@ let selectedReturnIssue = null;
 let toastTimer = null;
 
 const $ = id => document.getElementById(id);
+
+// Read every row in bounded pages so Supabase's per-request row cap cannot
+// silently truncate inventory, payments, jobs or student lists.
+async function fetchAllRows(table, select = "*", configure = null, pageSize = 1000) {
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    let query = db.from(table).select(select);
+    if (typeof configure === "function") query = configure(query);
+    const { data, error } = await query.range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+    if (offset > 200000) throw new Error(`The ${table} table is too large to load safely in one view. Use search or a date filter.`);
+  }
+  return rows;
+}
+
+function isFiniteNonNegative(value, label) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) throw new Error(`${label} must be a valid non-negative number.`);
+  return number;
+}
 
 
 /* =========================================================
@@ -825,16 +834,36 @@ async function signOut() {
   $("loginPassword").value = "";
 }
 
+let authStateListenerStarted = false;
+function startAuthStateListener() {
+  if (authStateListenerStarted) return;
+  authStateListenerStarted = true;
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT" || !session?.user) {
+      currentUser = null;
+      currentProfile = null;
+      $("appPage").classList.add("hidden");
+      $("loginPage").classList.remove("hidden");
+      $("loginPassword").value = "";
+    }
+  });
+}
+
 async function restoreSession() {
+  startAuthStateListener();
   try {
     const {data,error} = await db.auth.getSession();
     if (error) throw error;
-
-    if (data.session?.user) {
-      await loadProfile(data.session.user);
+    if (data.session?.user) await loadProfile(data.session.user);
+    else {
+      currentUser = null;
+      currentProfile = null;
+      $("appPage").classList.add("hidden");
+      $("loginPage").classList.remove("hidden");
     }
   } catch (error) {
     console.error("Session restore:",error);
+    showLoginError(error.message || "Your session could not be restored. Please sign in again.");
     await db.auth.signOut();
   }
 }
@@ -889,7 +918,7 @@ async function navigate(page) {
   } else if (page === "Components") {
     await renderComponents();
   } else if (page === "Issue / Return") {
-    await renderIssueReturn();
+    await renderIssues();
   } else if (page === "Trash") {
     await renderTrash();
   } else if (page === "3D Printing") {
@@ -955,9 +984,9 @@ async function renderDashboard() {
     ["Students","students","♙",true],
     ["Projects","projects","◈",true],
     ["Components","components","▣",true],
-    ["Stock Movements","stock_movements","⇄",false],
-    ["3D Printing Orders","printing_jobs","▤",false],
-    ["Payments","atl_payments","₹",false]
+    ["Stock Movements","component_stock_movements","⇄",true],
+    ["3D Printing Orders","printing_jobs","▤",true],
+    ["Payments","atl_payments","₹",true]
   ];
 
   try {
@@ -990,13 +1019,7 @@ async function renderDashboard() {
 ========================================================= */
 
 async function fetchStudents(includeDeleted=false) {
-  const {data,error} = await db.from("students")
-    .select("*")
-    .eq("deleted",includeDeleted)
-    .order("created_at",{ascending:false});
-
-  if (error) throw error;
-  return data || [];
+  return fetchAllRows("students", "*", q => q.eq("deleted",includeDeleted).order("created_at",{ascending:false}));
 }
 
 async function renderStudents() {
@@ -1480,20 +1503,13 @@ async function loadProjects(includeDeleted=false) {
   $("projectsTable").innerHTML = `<tr><td colspan="6" class="empty">Loading...</td></tr>`;
 
   try {
-    const [projectsResult,studentsResult] = await Promise.all([
-      db.from("projects").select("*")
-        .eq("deleted",includeDeleted)
-        .order("created_at",{ascending:false}),
-      db.from("students").select("id,name,student_class")
-        .eq("deleted",false)
-        .order("name")
+    const [projects,students] = await Promise.all([
+      fetchAllRows("projects","*",q=>q.eq("deleted",includeDeleted).order("created_at",{ascending:false})),
+      fetchAllRows("students","id,name,student_class",q=>q.eq("deleted",false).order("name"))
     ]);
 
-    if (projectsResult.error) throw projectsResult.error;
-    if (studentsResult.error) throw studentsResult.error;
-
-    projectCache = projectsResult.data || [];
-    projectStudents = studentsResult.data || [];
+    projectCache = projects || [];
+    projectStudents = students || [];
 
     if (includeDeleted) {
       drawProjectTrashRows(projectCache);
@@ -1906,15 +1922,8 @@ async function permanentlyDeleteProject(id) {
 
 
 async function checkDuplicateComponent(name, code, excludeId = null) {
-  let query = db.from("components")
-    .select("id, name, component_code")
-    .eq("deleted", false);
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-
-  const duplicate = (data || []).find(component => {
+  const data = await fetchAllRows("components", "id,name,component_code", q => q.eq("deleted", false));
+  const duplicate = data.find(component => {
     if (excludeId && component.id === excludeId) return false;
 
     const sameName =
@@ -1931,13 +1940,7 @@ async function checkDuplicateComponent(name, code, excludeId = null) {
 }
 
 async function fetchComponents(includeDeleted = false) {
-  const { data, error } = await db.from("components")
-    .select("*")
-    .eq("deleted", Boolean(includeDeleted))
-    .order("name");
-
-  if (error) throw error;
-  return data || [];
+  return fetchAllRows("components", "*", q => q.eq("deleted", Boolean(includeDeleted)).order("name"));
 }
 
 async function renderComponents() {
@@ -1953,6 +1956,7 @@ async function renderComponents() {
         <button class="btn btn-outline" id="componentBillButton">🧾 Bill to CSV</button>
         <button class="btn btn-outline" id="componentDamageButton">⚠ Damaged Parts</button>
         <button class="btn btn-outline" id="componentTestButton">🧪 Test & Debug Guide</button>
+        <button class="btn btn-outline" id="componentMovesButton">⇄ Stock History</button>
         <button class="btn btn-primary" id="addComponentButton">＋ Add Component</button>
       </div>
     </div>
@@ -1971,7 +1975,7 @@ async function renderComponents() {
         <table>
           <thead>
             <tr>
-              <th>Component</th><th>Code</th><th>Total Stock</th>
+              <th>Component</th><th>Code</th><th>Total Received</th>
               <th>Available</th><th>Minimum Stock</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
@@ -1986,6 +1990,7 @@ async function renderComponents() {
   $("componentBillButton").onclick = renderBillToCsv;
   $("componentDamageButton").onclick = renderDamagedComponents;
   $("componentTestButton").onclick = renderComponentTestGuide;
+  $("componentMovesButton").onclick = renderComponentMovements;
   $("componentTrashButton").onclick = renderComponentTrash;
   $("refreshComponents").onclick = renderComponents;
   $("componentSearch").addEventListener("input",filterComponents);
@@ -2001,146 +2006,7 @@ async function renderComponents() {
 }
 
 async function renderIssueReturn() {
-  $("pageContent").innerHTML = `
-    <div class="page-heading">
-      <div>
-        <h1>Component Issue Register</h1>
-        <p>Record which student took which component and when.</p>
-      </div>
-      <button class="btn btn-primary" id="addIssueButton">
-        + Record Issue
-      </button>
-    </div>
-
-    <div class="panel">
-      <div class="toolbar">
-        <input id="issueSearch" placeholder="Search student or component...">
-        <button class="btn btn-outline" id="refreshIssues">↻ Refresh</button>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Component</th>
-              <th>Quantity</th>
-              <th>Date Taken</th>
-              <th>Recorded By</th>
-            </tr>
-          </thead>
-          <tbody id="issuesTable"></tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  $("addIssueButton").onclick = openIssueForm;
-  $("refreshIssues").onclick = renderIssueReturn;
-  $("issueSearch").addEventListener("input", () => {
-    const term = $("issueSearch").value.toLowerCase().trim();
-    document.querySelectorAll("#issuesTable tr").forEach(row => {
-      row.classList.toggle("hidden", !row.textContent.toLowerCase().includes(term));
-    });
-  });
-
-  await loadIssueHistory();
-}
-
-async function loadIssueHistory() {
-  const table = $("issuesTable");
-
-  table.innerHTML = `
-    <tr><td colspan="5" class="empty">Loading records...</td></tr>
-  `;
-
-  try {
-    const { data, error } = await db
-      .from("component_issues")
-      .select("*")
-      .eq("deleted", false)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      table.innerHTML = `
-        <tr>
-          <td colspan="5" class="empty">No issue records yet.</td>
-        </tr>
-      `;
-      return;
-    }
-
-    const componentIds = [...new Set(data.map(item => item.component_id))];
-    const studentIds = [...new Set(data.map(item => item.student_id).filter(Boolean))];
-
-    const componentResult = await db.from("components")
-      .select("id, name")
-      .in("id", componentIds);
-
-    if (componentResult.error) throw componentResult.error;
-
-    let students = [];
-    if (studentIds.length) {
-      const studentResult = await db.from("students")
-        .select("*")
-        .in("id", studentIds);
-      if (studentResult.error) throw studentResult.error;
-      students = studentResult.data || [];
-    }
-
-    const components = componentResult.data || [];
-
-    const componentMap = Object.fromEntries(
-      (components || []).map(item => [item.id, item.name])
-    );
-
-    const studentMap = Object.fromEntries(
-      (students || []).map(item => [item.id, item])
-    );
-
-    const issuedByIds = [...new Set(data.map(item => item.issued_by).filter(Boolean))];
-    let profileMap = {};
-    if (issuedByIds.length) {
-      const profileResult = await db.from("profiles")
-        .select("id, username, role")
-        .in("id", issuedByIds);
-      if (!profileResult.error) {
-        profileMap = Object.fromEntries(
-          (profileResult.data || []).map(profile => [profile.id, profile])
-        );
-      }
-    }
-
-    table.innerHTML = data.map(item => {
-      const student = studentMap[item.student_id];
-      const studentName = item.person_name || student?.name || "Unknown";
-      const componentName = componentMap[item.component_id] || "Unknown";
-      const issuer = profileMap[item.issued_by];
-      const recordedBy = issuer?.username
-        || (item.issued_by === currentUser?.id
-          ? (currentProfile?.username || currentProfile?.role || "Current user")
-          : (issuer?.role || (item.issued_by ? "Staff member" : "—")));
-
-      return `
-        <tr>
-          <td>${escapeHTML(studentName)}</td>
-          <td>${escapeHTML(componentName)}</td>
-          <td>${Number(item.quantity_issued)}</td>
-          <td>${escapeHTML(item.issue_date || "—")}</td>
-          <td>${escapeHTML(recordedBy)}</td>
-        </tr>
-      `;
-    }).join("");
-
-  } catch (error) {
-    table.innerHTML = `
-      <tr>
-        <td colspan="5" class="empty">${escapeHTML(error.message)}</td>
-      </tr>
-    `;
-  }
+  return renderIssues();
 }
 
 function getComponentStatus(component) {
@@ -2197,13 +2063,18 @@ function drawComponentRows(rows) {
         <td><span class="tag ${status.className}">${status.text}</span></td>
         <td>
           <div class="actions">
-            <button class="btn btn-outline" data-component-edit="${component.id}">Edit</button>
-            <button class="btn btn-danger" data-component-trash="${component.id}">Trash</button>
+            <button type="button" class="btn btn-success" data-component-stock="${escapeHTML(component.id)}">Add stock</button>
+            <button type="button" class="btn btn-outline" data-component-edit="${escapeHTML(component.id)}">Edit</button>
+            <button type="button" class="btn btn-danger" data-component-trash="${escapeHTML(component.id)}">Trash</button>
           </div>
         </td>
       </tr>
     `;
   }).join("");
+
+  $("componentsTable").querySelectorAll("[data-component-stock]").forEach(button => {
+    button.onclick = () => openStockAdjustment(button.dataset.componentStock);
+  });
 
   $("componentsTable").querySelectorAll("[data-component-edit]").forEach(button => {
     button.onclick = () => {
@@ -2217,6 +2088,22 @@ function drawComponentRows(rows) {
   });
 }
 
+
+async function renderComponentMovements(){
+  $("pageContent").innerHTML=componentToolHeader('Component Stock History','A complete record of stock coming in, going out, returned and marked damaged.')+`<div class="panel"><div class="toolbar"><input id="movementSearch" placeholder="Search component, action or reference..."><button type="button" class="btn btn-outline" id="refreshComponentMovements">↻ Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Component</th><th>Movement</th><th>Quantity</th><th>Before</th><th>After</th><th>Reference / Notes</th><th>Recorded by</th></tr></thead><tbody id="componentMovementsTable"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody></table></div><div id="componentMovementError" class="error"></div></div>`;
+  bindComponentToolsBack();let rows=[];const draw=()=>{const term=($('movementSearch').value||'').toLowerCase().trim();const filtered=rows.filter(r=>[r.component_name,r.movement_type,r.reference,r.notes,r.performed_by_name].join(' ').toLowerCase().includes(term));$('componentMovementsTable').innerHTML=filtered.map(r=>`<tr><td>${formatDate(r.created_at)}</td><td>${escapeHTML(r.component_name)}</td><td><span class="tag">${escapeHTML(r.movement_type)}</span></td><td>${Number(r.quantity)}</td><td>${Number(r.quantity_before)}</td><td><strong>${Number(r.quantity_after)}</strong></td><td>${escapeHTML([r.reference,r.notes].filter(Boolean).join(' · ')||'—')}</td><td>${escapeHTML(r.performed_by_name||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">No stock movements found.</td></tr>';};
+  $('refreshComponentMovements').onclick=renderComponentMovements;$('movementSearch').oninput=draw;
+  try{rows=await fetchAllRows('component_stock_movements','*',q=>q.eq('deleted',false).order('created_at',{ascending:false}));draw();}catch(error){$('componentMovementError').textContent=error.message;}
+}
+
+async function openStockAdjustment(componentId) {
+  const component = componentCache.find(c => String(c.id) === String(componentId));
+  if (!component) return;
+  const modal=document.createElement("div");modal.className="payment-modal-backdrop";
+  modal.innerHTML=`<form class="payment-modal" id="stockAdjustmentForm" role="dialog" aria-modal="true" aria-labelledby="stockAdjustmentTitle"><div class="payment-modal-head"><div><h2 id="stockAdjustmentTitle">Add component stock</h2><p>${escapeHTML(component.name)} · Available now: ${Number(component.available_quantity||0)}</p></div><button type="button" class="payment-modal-close" id="closeStockAdjustment" aria-label="Close">×</button></div><div class="field"><label for="stockAdjustmentQty">Quantity received *</label><input id="stockAdjustmentQty" type="number" min="1" step="1" required value="1"></div><div class="field"><label for="stockAdjustmentReason">Source / reason *</label><input id="stockAdjustmentReason" maxlength="180" required placeholder="Example: Supplier bill INV-2026-014"></div><div id="stockAdjustmentError" class="error" role="alert"></div><div class="payment-modal-actions"><button type="button" class="btn btn-outline" id="cancelStockAdjustment">Cancel</button><button type="submit" class="btn btn-primary" id="saveStockAdjustment">Add stock</button></div></form>`;
+  document.body.appendChild(modal);const close=()=>modal.remove();modal.querySelector("#closeStockAdjustment").onclick=close;modal.querySelector("#cancelStockAdjustment").onclick=close;modal.addEventListener("click",e=>{if(e.target===modal)close();});
+  modal.querySelector("#stockAdjustmentForm").onsubmit=async e=>{e.preventDefault();const b=modal.querySelector("#saveStockAdjustment");b.disabled=true;try{const qty=Number(modal.querySelector("#stockAdjustmentQty").value);const reason=modal.querySelector("#stockAdjustmentReason").value.trim();if(!Number.isInteger(qty)||qty<=0)throw Error("Enter a whole number greater than zero.");if(!reason)throw Error("Enter the supplier or reason for this stock addition.");const {error}=await db.rpc("atl_adjust_component_stock",{p_component_id:String(component.id),p_quantity:qty,p_reason:reason});if(error)throw error;close();await logActivity("ADD COMPONENT STOCK",`${component.name}: +${qty} (${reason})`);showToast("Stock added and movement recorded.");await renderComponents();}catch(err){modal.querySelector("#stockAdjustmentError").textContent=err.message;b.disabled=false;}};
+}
 
 /* COMPONENT ADD / EDIT */
 
@@ -2480,27 +2367,14 @@ function getIssueOutstanding(issue) {
 }
 
 async function loadIssueData(includeDeleted=false) {
-  const [issuesResult,componentsResult,studentsResult] = await Promise.all([
-    db.from("component_issues")
-      .select("*")
-      .eq("deleted",includeDeleted)
-      .order("issue_date",{ascending:false})
-      .order("created_at",{ascending:false}),
-
-    db.from("components").select("*").order("name"),
-
-    db.from("students").select("id,name,student_class")
-      .eq("deleted",false)
-      .order("name")
+  const [issues,components,students] = await Promise.all([
+    fetchAllRows("component_issues","*",q=>q.eq("deleted",includeDeleted).order("issue_date",{ascending:false}).order("created_at",{ascending:false})),
+    fetchAllRows("components","*",q=>q.order("name")),
+    fetchAllRows("students","id,name,student_class",q=>q.eq("deleted",false).order("name"))
   ]);
-
-  if (issuesResult.error) throw issuesResult.error;
-  if (componentsResult.error) throw componentsResult.error;
-  if (studentsResult.error) throw studentsResult.error;
-
-  issueCache = issuesResult.data || [];
-  issueComponentCache = componentsResult.data || [];
-  issueStudentCache = studentsResult.data || [];
+  issueCache = issues;
+  issueComponentCache = components;
+  issueStudentCache = students;
 }
 
 async function renderIssues() {
@@ -2714,29 +2588,19 @@ async function saveIssue(event) {
     }
     if (!issueDate) throw new Error("Date taken is required.");
 
-    const component = issueComponentCache.find(item => item.id === componentId);
-    const student = issueStudentCache.find(item => item.id === studentId);
+    const component = issueComponentCache.find(item => String(item.id) === String(componentId));
+    const student = issueStudentCache.find(item => String(item.id) === String(studentId));
     if (!component) throw new Error("The selected component could not be found. Refresh and try again.");
     if (!student) throw new Error("The selected student could not be found. Refresh and try again.");
     if (!currentUser?.id) throw new Error("Your login session is missing. Please sign in again.");
 
-    // This is a register-only entry. It deliberately does not update component stock.
-    const { error } = await db.from("component_issues").insert({
-      component_id: componentId,
-      person_type: "ATL Student",
-      student_id: studentId,
-      person_name: student.name,
-      quantity_issued: quantity,
-      quantity_returned: 0,
-      issue_date: issueDate,
-      notes: $("issueNotes").value.trim() || null,
-      status: "Issued",
-      issued_by: currentUser.id,
-      deleted: false,
-      deleted_at: null,
-      deleted_by: null
+    const { error } = await db.rpc("atl_issue_component", {
+      p_component_id: String(componentId),
+      p_student_id: String(studentId),
+      p_quantity: quantity,
+      p_issue_date: issueDate,
+      p_notes: $("issueNotes").value.trim() || null
     });
-
     if (error) throw error;
 
     await logActivity(
@@ -2745,8 +2609,8 @@ async function saveIssue(event) {
     );
 
     closeIssueForm();
-    showToast("Issue record saved. Component stock was not changed.");
-    await renderIssueReturn();
+    showToast("Issue saved. Available stock has been reduced.");
+    await renderIssues();
   } catch (error) {
     $("issueFormError").textContent = error.message || "Could not save the issue record.";
   } finally {
@@ -2812,7 +2676,7 @@ async function saveReturn(event) {
     }
 
     const issueId = selectedReturnIssue.id;
-    const {data,error} = await db.rpc("return_component_issue",{
+    const {data,error} = await db.rpc("atl_return_component_issue",{
       p_issue_id:issueId,
       p_quantity:quantity,
       p_return_date:returnDate,
@@ -2855,6 +2719,7 @@ async function showIssueHistory(issue) {
     const {data,error} = await db.from("component_returns")
       .select("*")
       .eq("issue_id",issue.id)
+      .eq("deleted",false)
       .order("return_date",{ascending:false})
       .order("created_at",{ascending:false});
 
@@ -3068,6 +2933,7 @@ function parseCSV(text) {
         value += '"';
         i++;
       } else {
+        if (!quoted && value.length) throw new Error("Invalid CSV: quotation mark must begin a quoted field.");
         quoted = !quoted;
       }
     } else if (char === "," && !quoted) {
@@ -3084,6 +2950,7 @@ function parseCSV(text) {
     }
   }
 
+  if (quoted) throw new Error("Invalid CSV: a quoted field was not closed.");
   row.push(value);
   if (row.some(cell => cell.trim() !== "")) rows.push(row);
 
@@ -3172,6 +3039,13 @@ async function handleCsvFile(event) {
   resetCsvPreviewOnly();
   $("csvSelectedName").textContent = "Selected: " + file.name;
 
+  if (file.size > 5 * 1024 * 1024) {
+    $("csvStatus").textContent = "CSV is larger than 5 MB. Split it into smaller files.";
+    $("csvStatus").className = "csv-status csv-bad";
+    $("csvFile").value = "";
+    return;
+  }
+
   if (!file.name.toLowerCase().endsWith(".csv")) {
     $("csvStatus").textContent = "Please select a file ending in .csv";
     $("csvStatus").className = "csv-status csv-bad";
@@ -3228,9 +3102,8 @@ async function handleCsvFile(event) {
       }
     });
 
-    const {data:existing,error:existingError} = await db.from("students").select("id");
-    if (existingError) throw existingError;
-
+    if (csvRows.length > 500) throw new Error("Import is limited to 500 students per file. Split the CSV into smaller files.");
+    const existing = await fetchAllRows("students","id");
     const existingIds = new Set((existing || []).map(student => String(student.id)));
 
     csvValidRows = [];
@@ -3241,6 +3114,7 @@ async function handleCsvFile(event) {
 
       if (!row.id) problem = "Missing Student ID";
       else if (!row.name) problem = "Missing Student Name";
+      else if (row.fee_total && (!Number.isFinite(Number(row.fee_total)) || Number(row.fee_total) < 0)) problem = "Total Fee must be a non-negative number";
       else if (existingIds.has(row.id)) problem = "Student ID already exists";
       else if (duplicateIds.has(row.id)) problem = "Duplicate ID inside this CSV";
 
@@ -3449,17 +3323,15 @@ function paymentState(total,paid) {
 
 async function getJobPaidMap(jobIds) {
   if (!jobIds.length) return {};
-  const {data,error} = await db.from("atl_payments").select("printing_job_id,amount")
-    .in("printing_job_id",jobIds).eq("deleted",false);
-  if (error) throw error;
+  const data = await fetchAllRows("atl_payments", "printing_job_id,amount", q => q.in("printing_job_id",jobIds).eq("deleted",false));
   const map = {};
-  (data||[]).forEach(row => { map[row.printing_job_id]=(map[row.printing_job_id]||0)+Number(row.amount||0); });
+  data.forEach(row => { map[row.printing_job_id]=(map[row.printing_job_id]||0)+Number(row.amount||0); });
   return map;
 }
 
 async function renderPrintingJobs() {
   $("pageContent").innerHTML = `
-    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, charges and customer payments.</p></div><button class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
+    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, charges and customer payments.</p></div><button type="button" class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
     <div class="panel printing-create-panel">
       <div class="printing-section-heading"><span class="printing-heading-icon">＋</span><div><h3>Create print job</h3><p>Add a new 3D printed part and calculate its price</p></div></div>
       <form id="printingJobForm"><div class="form-grid">
@@ -3486,8 +3358,9 @@ async function renderPrintingJobs() {
 }
 
 async function loadPrintingJobs() {
-  const {data,error}=await db.from("printing_jobs").select("*").eq("deleted",false).order("created_at",{ascending:false});
-  if(error){$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Could not load jobs: ${escapeHTML(error.message)}. Check the Supabase SQL migration and RLS policies.</td></tr>`;return;}
+  let data;
+  try { data=await fetchAllRows("printing_jobs", "*", q => q.eq("deleted",false).order("created_at",{ascending:false})); }
+  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Could not load jobs: ${escapeHTML(error.message)}. Check the Supabase SQL migration and RLS policies.</td></tr>`;return;}
   printingJobsCache=data||[];
   try { const paid=await getJobPaidMap(printingJobsCache.map(x=>x.id)); printingJobsCache.forEach(x=>x._paid=paid[x.id]||0); }
   catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Payment data error: ${escapeHTML(error.message)}</td></tr>`;return;}
@@ -3503,15 +3376,20 @@ function drawPrintingJobs() {
   $("printingJobsTable").innerHTML=rows.map(j=>{
     const total=Number(j.amount||Number(j.weight_grams||0)*Number(j.rate_per_gram||0));
     const paid=Number(j._paid||0), balance=Math.max(0,total-paid), state=paymentState(total,paid);
-    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name)}</td><td>${escapeHTML(j.model_name)}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status)}</span></td><td><div class="actions"><button class="btn btn-success" onclick="recordJobPayment('${j.id}')" ${balance<=0?'disabled':''}>Add payment</button><button class="btn btn-outline" onclick="changeJobStatus('${j.id}')">Status</button><button class="btn btn-danger" onclick="deletePrintingJob('${j.id}')">Delete</button></div></td></tr>`;
+    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name)}</td><td>${escapeHTML(j.model_name)}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status)}</span></td><td><div class="actions"><button type="button" class="btn btn-success" data-job-payment="${escapeHTML(j.id)}" ${balance<=0?'disabled':''}>Add payment</button><button type="button" class="btn btn-outline" data-job-status="${escapeHTML(j.id)}">Status</button><button type="button" class="btn btn-danger" data-job-delete="${escapeHTML(j.id)}">Delete</button></div></td></tr>`;
   }).join("");
+  $("printingJobsTable").querySelectorAll("[data-job-payment]").forEach(b=>b.onclick=()=>recordJobPayment(b.dataset.jobPayment));
+  $("printingJobsTable").querySelectorAll("[data-job-status]").forEach(b=>b.onclick=()=>changeJobStatus(b.dataset.jobStatus));
+  $("printingJobsTable").querySelectorAll("[data-job-delete]").forEach(b=>b.onclick=()=>deletePrintingJob(b.dataset.jobDelete));
 }
 
 async function savePrintingJob(event) {
   event.preventDefault(); const button=$("savePrintingJob"); button.disabled=true; button.textContent="Saving...";
   try {
-    const weight=Number($("pjWeight").value), rate=Number($("pjRate").value), amount=Number((weight*rate).toFixed(2));
-    if(weight<=0||rate<0) throw new Error("Enter a valid weight and rate.");
+    const weight=Number($("pjWeight").value), rate=Number($("pjRate").value);
+    if(!Number.isFinite(weight)||weight<=0||!Number.isFinite(rate)||rate<0) throw new Error("Enter a valid positive weight and non-negative rate.");
+    const amount=Number((weight*rate).toFixed(2));
+    if(!Number.isFinite(amount)||amount>9999999999) throw new Error("Calculated job total is outside the supported range.");
     const payload={customer_name:$("pjCustomer").value.trim(),model_name:$("pjModel").value.trim(),material:$("pjMaterial").value,colour:$("pjColour").value.trim(),weight_grams:weight,rate_per_gram:rate,amount,due_date:$("pjDue").value||null,status:$("pjStatus").value,notes:$("pjNotes").value.trim(),created_by:currentUser.id};
     const {error}=await db.from("printing_jobs").insert(payload); if(error) throw error;
     $("printingJobForm").reset(); $("pjWeight").value=1; $("pjRate").value=5; $("pjEstimate").textContent="Estimated total: ₹5.00";
@@ -3544,7 +3422,7 @@ async function recordJobPayment(jobId) {
         <div class="payment-summary-card"><span>Balance due</span><strong>${money(balance)}</strong></div>
       </div>
       <div class="field"><label for="jobPaymentAmount">Amount received (₹) *</label><input id="jobPaymentAmount" type="number" min="0.01" max="${balance.toFixed(2)}" step="0.01" placeholder="Enter amount" required autofocus></div>
-      <div class="field"><label for="jobPaymentMethod">Payment method *</label><select id="jobPaymentMethod" required><option value="GPay">GPay</option><option value="Cash">Cash</option></select></div>
+      <div class="field"><label for="jobPaymentMethod">Payment method *</label><select id="jobPaymentMethod" required><option value="GPay">GPay</option><option value="Cash">Cash</option><option value="Other">Other</option></select></div>
       <div class="field"><label for="jobPaymentReceiver">Received by</label><input id="jobPaymentReceiver" type="text" maxlength="100" value="Lab Admin" placeholder="Name of receiver"></div>
       <div class="payment-modal-error" id="jobPaymentError" role="alert"></div>
       <div class="payment-modal-actions"><button type="button" class="btn btn-outline" id="cancelPrintingPayment">Cancel</button><button type="submit" class="btn btn-primary" id="savePrintingPayment">Save payment</button></div>
@@ -3569,7 +3447,7 @@ async function recordJobPayment(jobId) {
     const saveButton=modal.querySelector("#savePrintingPayment");
     saveButton.disabled=true;saveButton.textContent="Saving...";errorBox.textContent="";
     try{
-      const {error}=await db.from("atl_payments").insert({printing_job_id:job.id,payment_type:"3D Printing",customer_name:job.customer_name,amount:Number(amount.toFixed(2)),payment_method:method,received_by:receiver,payment_date:todayLocal(),created_by:currentUser.id,deleted:false});
+      const {error}=await db.rpc("atl_record_payment",{p_payment_type:"3D Printing",p_customer_name:job.customer_name,p_amount:Number(amount.toFixed(2)),p_payment_method:method,p_received_by:receiver,p_payment_date:todayLocal(),p_reference:null,p_notes:null,p_student_id:null,p_printing_job_id:job.id});
       if(error)throw error;
       document.removeEventListener("keydown",onEscape);
       close();showToast("Payment recorded successfully.");await loadPrintingJobs();
@@ -3582,10 +3460,10 @@ async function recordJobPayment(jobId) {
 }
 async function changeJobStatus(jobId) {
   const job=printingJobsCache.find(x=>String(x.id)===String(jobId)); if(!job)return;
-  const status=prompt("Enter status: Queued, Printing, Completed, Failed or Cancelled",job.status||"Queued"); if(status===null)return;
-  const valid=["Queued","Printing","Completed","Failed","Cancelled"];
-  if(!valid.includes(status)){await atlAlert("Please enter one of the listed statuses with the same spelling.");return;}
-  const {error}=await db.from("printing_jobs").update({status}).eq("id",job.id); if(error) await atlAlert(error.message,"Update failed","⚠"); else {showToast("Job status updated.");await loadPrintingJobs();}
+  const modal=document.createElement("div");modal.className="payment-modal-backdrop";modal.id="jobStatusModal";
+  modal.innerHTML=`<form class="payment-modal" id="jobStatusForm" role="dialog" aria-modal="true" aria-labelledby="jobStatusTitle"><div class="payment-modal-head"><div><h2 id="jobStatusTitle">Update print status</h2><p>${escapeHTML(job.job_code||job.model_name)}</p></div><button type="button" class="payment-modal-close" id="closeJobStatus" aria-label="Close">×</button></div><div class="field"><label for="jobStatusChoice">Job status</label><select id="jobStatusChoice"><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div><div id="jobStatusError" class="error" role="alert"></div><div class="payment-modal-actions"><button type="button" class="btn btn-outline" id="cancelJobStatus">Cancel</button><button type="submit" class="btn btn-primary" id="saveJobStatus">Save status</button></div></form>`;
+  document.body.appendChild(modal);const close=()=>modal.remove();modal.querySelector("#jobStatusChoice").value=job.status||"Queued";modal.querySelector("#closeJobStatus").onclick=close;modal.querySelector("#cancelJobStatus").onclick=close;modal.addEventListener("click",e=>{if(e.target===modal)close();});
+  modal.querySelector("#jobStatusForm").onsubmit=async e=>{e.preventDefault();const b=modal.querySelector("#saveJobStatus");b.disabled=true;try{const status=modal.querySelector("#jobStatusChoice").value;const {error}=await db.from("printing_jobs").update({status}).eq("id",job.id);if(error)throw error;close();showToast("Job status updated.");await loadPrintingJobs();}catch(error){modal.querySelector("#jobStatusError").textContent=error.message;b.disabled=false;}};
 }
 
 async function deletePrintingJob(jobId) {
@@ -3627,9 +3505,7 @@ async function renderPrintingTrash() {
     </div>`;
   $("backToPrintingJobs").onclick = renderPrintingJobs;
   try {
-    const { data, error } = await db.from("printing_jobs").select("*").eq("deleted", true).order("deleted_at", { ascending: false });
-    if (error) throw error;
-    const rows = data || [];
+    const rows = await fetchAllRows("printing_jobs","*",q=>q.eq("deleted",true).order("deleted_at",{ascending:false}));
     if (!rows.length) {
       $("printingTrashTable").innerHTML = '<tr><td colspan="7" class="empty">3D Printing Trash is empty.</td></tr>';
       return;
@@ -3698,7 +3574,7 @@ function money(value){return "₹"+Number(value||0).toLocaleString("en-IN",{mini
 function studentPaidTotal(id){return paymentsCache.filter(p=>p.student_id===id && p.payment_type==="Student Fee").reduce((a,p)=>a+Number(p.amount||0),0);}
 function jobPaidTotal(id){return paymentsCache.filter(p=>p.printing_job_id===id).reduce((a,p)=>a+Number(p.amount||0),0);}
 async function renderPayments(){
-  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Payments</h1><p>All receipts, advance payments and outstanding balances.</p></div><button class="btn btn-outline" id="refreshPayments">↻ Refresh</button></div>
+  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Payments</h1><p>All receipts, advance payments and outstanding balances.</p></div><button type="button" class="btn btn-outline" id="refreshPayments">↻ Refresh</button></div>
   <div class="cards"><div class="stat-card"><div class="stat-title">Total received</div><div class="stat-number" id="paymentTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Student fee balance</div><div class="stat-number" id="studentBalanceTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Printing balance</div><div class="stat-number" id="printingBalanceTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Payment records</div><div class="stat-number" id="paymentCount">0</div></div></div>
   <div class="panel"><h3>Record a payment</h3><form id="generalPaymentForm"><div class="form-grid"><div class="field"><label>Category *</label><select id="payType"><option>Student Fee</option><option>3D Printing</option><option>General</option></select></div><div class="field" id="payStudentWrap"><label>Student *</label><select id="payStudent"><option value="">Select student</option></select></div><div class="field hidden" id="payJobWrap"><label>Printing job *</label><select id="payJob"><option value="">Select job</option></select></div><div class="field"><label>Customer / Student *</label><input id="payCustomer" required></div><div class="field"><label>Amount (₹) *</label><input id="payAmount" type="number" min="0.01" step="0.01" required></div><div class="field"><label>Method *</label><select id="payMethod"><option>GPay</option><option>Cash</option><option>Other</option></select></div><div class="field"><label>Received by</label><input id="payReceiver" value="Lab Admin"></div><div class="field"><label>Date *</label><input id="payDate" type="date" required></div><div class="field"><label>Reference / Transaction ID</label><input id="payReference"></div><div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="payNotes" rows="2"></textarea></div></div><div class="notice" id="paymentContext">Select a student or printing job to see the balance.</div><button class="btn btn-primary" id="saveGeneralPayment" type="submit">Save payment</button><div id="paymentError" class="error"></div></form></div>
   <div class="panel"><div class="toolbar"><h3 style="margin:0">Student fee balances</h3><div class="search"><input id="feeSearch" placeholder="Search student, class or batch..."></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Class</th><th>Batch</th><th>Total fee</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="studentFeeTable"></tbody></table></div></div>
@@ -3706,9 +3582,8 @@ async function renderPayments(){
   $("payDate").value=todayLocal(); $("refreshPayments").onclick=renderPayments; $("generalPaymentForm").onsubmit=saveGeneralPayment; $("payType").onchange=updatePaymentCategory; $("payStudent").onchange=updatePaymentContext; $("payJob").onchange=updatePaymentContext; $("paymentSearch").oninput=drawPayments; $("paymentFilter").onchange=drawPayments; $("feeSearch").oninput=drawStudentFeeBalances; await loadPayments();
 }
 async function loadPayments(){
- const [p,s,j]=await Promise.all([db.from("atl_payments").select("*").eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false}),db.from("students").select("id,name,student_class,batch_name,fee_total").eq("deleted",false).order("name"),db.from("printing_jobs").select("id,job_code,customer_name,model_name,amount").eq("deleted",false)]);
- if(p.error){$("paymentsTable").innerHTML=`<tr><td colspan="8" class="empty">${escapeHTML(p.error.message)}</td></tr>`;return;} if(s.error){$("paymentError").textContent=s.error.message;return;} if(j.error){$("paymentError").textContent=j.error.message;return;}
- paymentsCache=p.data||[];paymentStudents=s.data||[];paymentJobs=j.data||[];
+ let p,s,j;try{[p,s,j]=await Promise.all([fetchAllRows("atl_payments","*",q=>q.eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false})),fetchAllRows("students","id,name,student_class,batch_name,fee_total",q=>q.eq("deleted",false).order("name")),fetchAllRows("printing_jobs","id,job_code,customer_name,model_name,amount",q=>q.eq("deleted",false))]);}catch(error){$("paymentsTable").innerHTML=`<tr><td colspan="8" class="empty">${escapeHTML(error.message)}</td></tr>`;return;}
+ paymentsCache=p||[];paymentStudents=s||[];paymentJobs=j||[];
  $("payStudent").innerHTML='<option value="">Select student</option>'+paymentStudents.map(x=>`<option value="${escapeHTML(x.id)}">${escapeHTML(x.name)} (${escapeHTML(x.id)})</option>`).join("");
  $("payJob").innerHTML='<option value="">Select job</option>'+paymentJobs.map(x=>`<option value="${escapeHTML(x.id)}">${escapeHTML(x.job_code||x.model_name)} — ${escapeHTML(x.customer_name)}</option>`).join("");
  $("paymentTotal").textContent=money(paymentsCache.reduce((a,x)=>a+Number(x.amount||0),0));$("paymentCount").textContent=paymentsCache.length;
@@ -3719,21 +3594,21 @@ function updatePaymentCategory(){const t=$("payType").value;$("payStudentWrap").
 function updatePaymentContext(){const t=$("payType").value;if(t==="Student Fee"){const x=paymentStudents.find(a=>a.id===$("payStudent").value);if(!x){$("paymentContext").textContent="Select a student to view fee details.";return;}const paid=studentPaidTotal(x.id),fee=Number(x.fee_total||0);$("payCustomer").value=x.name;$("paymentContext").textContent=`Fee ${money(fee)} · Paid ${money(paid)} · Balance ${money(Math.max(fee-paid,0))} · Batch ${x.batch_name||"Not assigned"}`;}else if(t==="3D Printing"){const x=paymentJobs.find(a=>a.id===$("payJob").value);if(!x){$("paymentContext").textContent="Select a job to view payment details.";return;}const paid=jobPaidTotal(x.id),total=Number(x.amount||0);$("payCustomer").value=x.customer_name;$("paymentContext").textContent=`Total ${money(total)} · Paid ${money(paid)} · Balance ${money(Math.max(total-paid,0))}`;}else $("paymentContext").textContent="General receipt — not linked to a student or printing job.";}
 function drawStudentFeeBalances(){const term=($("feeSearch")?.value||"").toLowerCase();const rows=paymentStudents.filter(x=>[x.name,x.id,x.student_class,x.batch_name].join(" ").toLowerCase().includes(term));$("studentFeeTable").innerHTML=rows.map(x=>{const fee=Number(x.fee_total||0),paid=studentPaidTotal(x.id),bal=Math.max(fee-paid,0),status=fee===0?"Fee not set":bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";return `<tr><td>${escapeHTML(x.name)}<div class="small muted">${escapeHTML(x.id)}</div></td><td>${escapeHTML(x.student_class||"—")}</td><td>${escapeHTML(x.batch_name||"—")}</td><td>${money(fee)}</td><td>${money(paid)}</td><td><strong>${money(bal)}</strong></td><td><span class="tag">${status}</span></td></tr>`;}).join("")||'<tr><td colspan="7" class="empty">No students found.</td></tr>';}
 function drawPayments(){const term=($("paymentSearch")?.value||"").toLowerCase(),filter=$("paymentFilter")?.value||"All";const rows=paymentsCache.filter(x=>(filter==="All"||(x.payment_type||(x.printing_job_id?"3D Printing":"General"))===filter)&&[x.customer_name,x.payment_method,x.received_by,x.reference,x.notes,x.payment_type].join(" ").toLowerCase().includes(term));$("paymentsTable").innerHTML=rows.map(x=>{let status="Received";if(x.student_id){const st=paymentStudents.find(z=>String(z.id)===String(x.student_id));if(st){const fee=Number(st.fee_total||0),paid=studentPaidTotal(st.id),bal=Math.max(0,fee-paid);status=fee===0?"Fee not set":bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";}else status="Student payment";}else if(x.printing_job_id){const job=paymentJobs.find(z=>String(z.id)===String(x.printing_job_id));if(job){const total=Number(job.amount||0),paid=jobPaidTotal(job.id),bal=Math.max(0,total-paid);status=bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";}else status="Printing payment";}return `<tr><td>${formatDate(x.payment_date)}</td><td>${escapeHTML(x.customer_name||"—")}</td><td>${escapeHTML(x.payment_type||(x.printing_job_id?"3D Printing":"General"))}</td><td><strong>${money(x.amount)}</strong></td><td>${escapeHTML(x.payment_method)}</td><td>${escapeHTML(x.received_by||"Lab Admin")}</td><td>${escapeHTML(x.reference||"—")}</td><td><span class="tag">${status}</span></td></tr>`;}).join("")||'<tr><td colspan="8" class="empty">No payment records found.</td></tr>'; }
-async function saveGeneralPayment(e){e.preventDefault();const b=$("saveGeneralPayment");b.disabled=true;try{const t=$("payType").value,a=Number($("payAmount").value);if(!(a>0))throw Error("Enter a valid amount.");const data={customer_name:$("payCustomer").value.trim(),amount:Number(a.toFixed(2)),payment_method:$("payMethod").value,received_by:$("payReceiver").value.trim()||"Lab Admin",payment_date:$("payDate").value,payment_type:t,reference:$("payReference").value.trim()||null,notes:$("payNotes").value.trim()||null,created_by:currentUser.id,deleted:false};if(t==="Student Fee"){const x=paymentStudents.find(z=>z.id===$("payStudent").value);if(!x)throw Error("Select a student.");const bal=Math.max(Number(x.fee_total||0)-studentPaidTotal(x.id),0);if(Number(x.fee_total||0)>0&&a>bal+0.005)throw Error("Amount exceeds the remaining student fee balance.");data.student_id=x.id;data.customer_name=x.name;}if(t==="3D Printing"){const x=paymentJobs.find(z=>z.id===$("payJob").value);if(!x)throw Error("Select a printing job.");const bal=Math.max(Number(x.amount||0)-jobPaidTotal(x.id),0);if(a>bal+0.005)throw Error("Amount exceeds the remaining printing balance.");data.printing_job_id=x.id;data.customer_name=x.customer_name;}const {error}=await db.from("atl_payments").insert(data);if(error)throw error;$("generalPaymentForm").reset();$("payDate").value=todayLocal();$("payReceiver").value="Lab Admin";showToast("Payment saved.");await loadPayments();}catch(err){$("paymentError").textContent=err.message;}finally{b.disabled=false;}}
+async function saveGeneralPayment(e){e.preventDefault();const b=$("saveGeneralPayment");b.disabled=true;try{const t=$("payType").value,a=Number($("payAmount").value);if(!Number.isFinite(a)||a<=0||a>9999999999)throw Error("Enter a valid amount greater than zero and within the supported limit.");if(!$("payDate").value)throw Error("Payment date is required.");if(!["GPay","Cash","Other"].includes($("payMethod").value))throw Error("Choose a valid payment method.");const data={p_payment_type:t,p_customer_name:$("payCustomer").value.trim(),p_amount:Number(a.toFixed(2)),p_payment_method:$("payMethod").value,p_received_by:$("payReceiver").value.trim()||"Lab Admin",p_payment_date:$("payDate").value,p_reference:$("payReference").value.trim()||null,p_notes:$("payNotes").value.trim()||null,p_student_id:null,p_printing_job_id:null};if(t==="Student Fee"){const x=paymentStudents.find(z=>String(z.id)===String($("payStudent").value));if(!x)throw Error("Select a student.");data.p_student_id=String(x.id);data.p_customer_name=x.name;}if(t==="3D Printing"){const x=paymentJobs.find(z=>String(z.id)===String($("payJob").value));if(!x)throw Error("Select a printing job.");data.p_printing_job_id=x.id;data.p_customer_name=x.customer_name;}const {error}=await db.rpc("atl_record_payment",data);if(error)throw error;$("generalPaymentForm").reset();$("payDate").value=todayLocal();$("payReceiver").value="Lab Admin";showToast("Payment saved.");await loadPayments();}catch(err){$("paymentError").textContent=err.message;}finally{b.disabled=false;}}
 
 /* =========================================================
    YEAR-END ARCHIVE / CLEANUP - ADMIN ONLY
 ========================================================= */
-async function renderYearEndCleanup(){if(!isAdmin()){await atlAlert("Only Admin can access year-end cleanup.","Access denied","🔒");return;}const y=new Date().getFullYear()-1;$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Year-end archive & cleanup</h1><p>Archive old records and move them to Trash in one operation.</p></div></div><div class="panel"><div class="notice"><strong>Important:</strong> The system archives records first. It does not instantly erase payment history.</div><div class="form-grid"><div class="field"><label>Archive records before year</label><select id="cleanupYear">${Array.from({length:10},(_,i)=>`<option>${y-i}</option>`).join("")}</select></div><div class="field"><label>Confirmation phrase</label><input id="cleanupConfirmText" placeholder="ARCHIVE AND CLEAR"></div></div><p class="small muted">Includes students, projects, components, component issues, printing jobs and payments.</p><button class="btn btn-danger" id="runYearEndCleanup">Archive & move old records to Trash</button><div id="cleanupMessage" class="error"></div></div>`;$("runYearEndCleanup").onclick=runYearEndCleanup;}
+async function renderYearEndCleanup(){if(!isAdmin()){await atlAlert("Only Admin can access year-end cleanup.","Access denied","🔒");return;}const y=new Date().getFullYear()-1;$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Year-end archive & cleanup</h1><p>Archive old records and move them to Trash in one operation.</p></div></div><div class="panel"><div class="notice"><strong>Important:</strong> The system archives records first. It does not instantly erase payment history.</div><div class="form-grid"><div class="field"><label>Archive records before year</label><select id="cleanupYear">${Array.from({length:10},(_,i)=>`<option>${y-i}</option>`).join("")}</select></div><div class="field"><label>Confirmation phrase</label><input id="cleanupConfirmText" placeholder="ARCHIVE AND CLEAR"></div></div><p class="small muted">Includes completed projects, fully returned component issues, supporting history and closed, fully paid printing jobs. Student/component master records and payment history are retained to protect balances.</p><button class="btn btn-danger" id="runYearEndCleanup">Archive & move old records to Trash</button><div id="cleanupMessage" class="error"></div></div>`;$("runYearEndCleanup").onclick=runYearEndCleanup;}
 async function runYearEndCleanup(){if($("cleanupConfirmText").value.trim()!=="ARCHIVE AND CLEAR"){ $("cleanupMessage").textContent="Type ARCHIVE AND CLEAR exactly.";return;}const y=Number($("cleanupYear").value);if(!await atlConfirm(`Archive and move records dated before 1 January ${y} to Trash?`,"Confirm year-end cleanup",true))return;const b=$("runYearEndCleanup");b.disabled=true;b.textContent="Archiving...";try{const {data,error}=await db.rpc("atl_year_end_archive_and_clear",{p_before_date:`${y}-01-01`,p_confirmation:"ARCHIVE AND CLEAR"});if(error)throw error;$("cleanupMessage").textContent=`Completed. ${data?.archived_count??"Records"} archived.`;$("cleanupMessage").className="success";}catch(e){$("cleanupMessage").textContent=e.message;$("cleanupMessage").className="error";}finally{b.disabled=false;b.textContent="Archive & move old records to Trash";}}
 
 /* =========================================================
    BASIC REPORTS AND ADMIN SETTINGS
 ========================================================= */
 async function renderReports(){
-  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Reports</h1><p>Live operational and payment summaries.</p></div><button class="btn btn-outline" id="refreshReports">↻ Refresh</button></div><div class="cards" id="reportCards"></div><div class="panel"><h3>Recent payments</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Received by</th></tr></thead><tbody id="reportPayments"></tbody></table></div></div>`;
+  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Reports</h1><p>Live operational and payment summaries.</p></div><button type="button" class="btn btn-outline" id="refreshReports">↻ Refresh</button></div><div class="cards" id="reportCards"></div><div class="panel"><h3>Recent payments</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Received by</th></tr></thead><tbody id="reportPayments"></tbody></table></div></div>`;
   $("refreshReports").onclick=renderReports;
-  try{const [students,projects,components,jobs,payments]=await Promise.all([getCount("students",true),getCount("projects",true),getCount("components",true),getCount("printing_jobs",false),db.from("atl_payments").select("*").eq("deleted",false).order("payment_date",{ascending:false}).limit(10)]);if(payments.error)throw payments.error;const total=(payments.data||[]).reduce((a,p)=>a+Number(p.amount||0),0);const cards=[["Students",students],["Projects",projects],["Components",components],["3D Print Jobs",jobs],["Payments Received",money(total)]];$("reportCards").innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-title">${c[0]}</div><div class="stat-number">${c[1]}</div></div>`).join("");$("reportPayments").innerHTML=(payments.data||[]).map(p=>`<tr><td>${formatDate(p.payment_date)}</td><td>${escapeHTML(p.customer_name||"—")}</td><td>${money(p.amount)}</td><td>${escapeHTML(p.payment_method)}</td><td>${escapeHTML(p.received_by||"Lab Admin")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No payments yet.</td></tr>';}catch(error){$("reportCards").innerHTML=`<div class="notice">Report error: ${escapeHTML(error.message)}</div>`;}
+  try{const [students,projects,components,jobs,allPayments]=await Promise.all([getCount("students",true),getCount("projects",true),getCount("components",true),getCount("printing_jobs",true),fetchAllRows("atl_payments","*",q=>q.eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false}))]);const total=allPayments.reduce((a,p)=>a+Number(p.amount||0),0);const recent=allPayments.slice(0,10);const cards=[["Students",students],["Projects",projects],["Components",components],["Active 3D Print Jobs",jobs],["All-time Payments Received",money(total)]];$("reportCards").innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-title">${escapeHTML(c[0])}</div><div class="stat-number">${escapeHTML(c[1])}</div></div>`).join("");$("reportPayments").innerHTML=recent.map(p=>`<tr><td>${formatDate(p.payment_date)}</td><td>${escapeHTML(p.customer_name||"—")}</td><td>${money(p.amount)}</td><td>${escapeHTML(p.payment_method)}</td><td>${escapeHTML(p.received_by||"Lab Admin")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No payments yet.</td></tr>';}catch(error){$("reportCards").innerHTML=`<div class="notice">Report error: ${escapeHTML(error.message)}</div>`;}
 }
 
 async function renderSettings(){if(!isAdmin()){await atlAlert("Only Admin can access Settings.","Access denied","🔒");return;}$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Settings</h1><p>Administrator information and system status.</p></div></div><div class="panel"><h3>Signed-in administrator</h3><p><strong>Username:</strong> ${escapeHTML(currentProfile?.username||"—")}</p><p><strong>Role:</strong> ${escapeHTML(currentProfile?.role||"—")}</p><p><strong>Email:</strong> ${escapeHTML(currentUser?.email||"—")}</p></div><div class="panel"><h3>Year-end archive & cleanup</h3><p class="muted">Archive old records and move them to Trash after a backup.</p><button class="btn btn-danger" id="openYearEndCleanup">Open year-end cleanup</button></div><div class="panel"><h3>Database connection</h3><p class="muted">The application uses Supabase authentication and Row Level Security. Do not disable RLS or expose a service-role key in this HTML file.</p></div>`;$("openYearEndCleanup").onclick=renderYearEndCleanup;}
@@ -3755,12 +3630,14 @@ function componentToolHeader(title, subtitle) {
 function bindComponentToolsBack(){const b=$("componentToolsBack");if(b)b.onclick=()=>navigate("Components");}
 
 function parseCsvRows(text){
+  const source=String(text??'').replace(/^\uFEFF/,'');
   const rows=[];let row=[],cell='',quoted=false;
-  for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c==='"'&&quoted&&n==='"'){cell+='"';i++;}else if(c==='"'){quoted=!quoted;}else if(c===','&&!quoted){row.push(cell);cell='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(v=>v.trim()))rows.push(row);row=[];cell='';}else cell+=c;}
+  for(let i=0;i<source.length;i++){const c=source[i],n=source[i+1];if(c==='"'&&quoted&&n==='"'){cell+='"';i++;}else if(c==='"'){if(!quoted&&cell.length)throw new Error('Invalid CSV: quotation mark must begin a quoted field.');quoted=!quoted;}else if(c===','&&!quoted){row.push(cell);cell='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(v=>v.trim()))rows.push(row);row=[];cell='';}else cell+=c;}
+  if(quoted)throw new Error('Invalid CSV: a quoted field was not closed.');
   row.push(cell);if(row.some(v=>v.trim()))rows.push(row);return rows;
 }
-function csvEscape(v){const x=String(v??'');return /[",\n\r]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}
-function downloadCsv(filename,headers,rows){const csv=[headers,...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+function csvEscape(v){let x=String(v??'');if(/^[\s]*[=+@\-]/.test(x))x="'"+x;return /[",\n\r]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}
+function downloadCsv(filename,headers,rows){const csv=[headers,...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
 async function renderComponentCsvImport(){
   $("pageContent").innerHTML=componentToolHeader('Import Components from CSV','Upload a CSV file, check the preview, then import the valid rows into inventory.')+`
@@ -3771,8 +3648,8 @@ async function renderComponentCsvImport(){
   <div class="modal-actions"><button class="btn btn-primary" id="confirmComponentCsv" disabled>Import valid components</button></div><div id="componentCsvError" class="error"></div></div>`;
   bindComponentToolsBack();let valid=[];
   $("downloadComponentTemplate").onclick=()=>downloadCsv('ATL_component_import_template.csv',['name','component_code','total_quantity','minimum_stock'],[['Red LED','LED-RED-001',100,10],['220 Ohm Resistor','RES-220-001',50,5]]);
-  $("componentCsvFile").onchange=async e=>{valid=[];$("confirmComponentCsv").disabled=true;$("componentCsvError").textContent='';const file=e.target.files[0];if(!file)return;try{const rows=parseCsvRows(await file.text());if(rows.length<2)throw Error('CSV must include a header and at least one component row.');const headers=rows[0].map(x=>x.trim().toLowerCase());const idx=k=>headers.indexOf(k);if(idx('name')<0||idx('total_quantity')<0)throw Error('Required columns: name and total_quantity. Download the template to see the format.');const existing=await fetchComponents(false);const names=new Set(existing.map(x=>String(x.name||'').toLowerCase()));const codes=new Set(existing.map(x=>String(x.component_code||'').toLowerCase()).filter(Boolean));const seenN=new Set(),seenC=new Set();const preview=[];rows.slice(1).forEach((r,i)=>{const get=k=>idx(k)>=0?(r[idx(k)]||'').trim():'';const item={name:get('name'),component_code:get('component_code')||null,total_quantity:Number(get('total_quantity')),minimum_stock:Number(get('minimum_stock')||0)};let reason='Ready';if(!item.name)reason='Missing name';else if(!Number.isInteger(item.total_quantity)||item.total_quantity<0)reason='Quantity must be a whole number';else if(!Number.isInteger(item.minimum_stock)||item.minimum_stock<0)reason='Minimum stock must be a whole number';else if(names.has(item.name.toLowerCase())||seenN.has(item.name.toLowerCase()))reason='Duplicate component name';else if(item.component_code&&(codes.has(item.component_code.toLowerCase())||seenC.has(item.component_code.toLowerCase())))reason='Duplicate component code';if(reason==='Ready'){valid.push(item);seenN.add(item.name.toLowerCase());if(item.component_code)seenC.add(item.component_code.toLowerCase());}preview.push({...item,reason,row:i+2});});$("componentCsvPreview").innerHTML=preview.map(x=>`<tr><td>${escapeHTML(x.name)}</td><td>${escapeHTML(x.component_code||'—')}</td><td>${escapeHTML(x.total_quantity)}</td><td>${escapeHTML(x.minimum_stock)}</td><td><span class="tag">${escapeHTML(x.reason)}</span></td></tr>`).join('');$("componentCsvSummary").textContent=`${preview.length} rows found • ${valid.length} ready to import • ${preview.length-valid.length} need correction or are duplicates.`;$("confirmComponentCsv").disabled=!valid.length;}catch(err){$("componentCsvError").textContent=err.message;}};
-  $("confirmComponentCsv").onclick=async()=>{const b=$("confirmComponentCsv");b.disabled=true;b.textContent='Importing...';try{for(const c of valid){const {error}=await db.from('components').insert({...c,available_quantity:c.total_quantity,deleted:false,deleted_at:null,deleted_by:null});if(error)throw error;}await logActivity('CSV IMPORT COMPONENTS',`${valid.length} components imported`);showToast(`${valid.length} components imported.`);await renderComponents();}catch(err){$("componentCsvError").textContent='Import stopped: '+err.message;b.disabled=false;b.textContent='Import valid components';}};
+  $("componentCsvFile").onchange=async e=>{valid=[];$("confirmComponentCsv").disabled=true;$("componentCsvError").textContent='';const file=e.target.files[0];if(!file)return;try{if(file.size>5*1024*1024)throw Error('CSV is larger than 5 MB. Split it into smaller files.');const rows=parseCsvRows(await file.text());if(rows.length<2)throw Error('CSV must include a header and at least one component row.');const headers=rows[0].map(x=>x.trim().toLowerCase());const idx=k=>headers.indexOf(k);if(idx('name')<0||idx('total_quantity')<0)throw Error('Required columns: name and total_quantity. Download the template to see the format.');const existing=await fetchComponents(false);const names=new Set(existing.map(x=>String(x.name||'').toLowerCase()));const codes=new Set(existing.map(x=>String(x.component_code||'').toLowerCase()).filter(Boolean));const seenN=new Set(),seenC=new Set();const preview=[];rows.slice(1).forEach((r,i)=>{const get=k=>idx(k)>=0?(r[idx(k)]||'').trim():'';const item={name:get('name'),component_code:get('component_code')||null,total_quantity:Number(get('total_quantity')),minimum_stock:Number(get('minimum_stock')||0)};let reason='Ready';if(!item.name)reason='Missing name';else if(!Number.isInteger(item.total_quantity)||item.total_quantity<0)reason='Quantity must be a whole number';else if(!Number.isInteger(item.minimum_stock)||item.minimum_stock<0)reason='Minimum stock must be a whole number';else if(names.has(item.name.toLowerCase())||seenN.has(item.name.toLowerCase()))reason='Duplicate component name';else if(item.component_code&&(codes.has(item.component_code.toLowerCase())||seenC.has(item.component_code.toLowerCase())))reason='Duplicate component code';if(reason==='Ready'){valid.push(item);seenN.add(item.name.toLowerCase());if(item.component_code)seenC.add(item.component_code.toLowerCase());}preview.push({...item,reason,row:i+2});});$("componentCsvPreview").innerHTML=preview.map(x=>`<tr><td>${escapeHTML(x.name)}</td><td>${escapeHTML(x.component_code||'—')}</td><td>${escapeHTML(x.total_quantity)}</td><td>${escapeHTML(x.minimum_stock)}</td><td><span class="tag">${escapeHTML(x.reason)}</span></td></tr>`).join('');$("componentCsvSummary").textContent=`${preview.length} rows found • ${valid.length} ready to import • ${preview.length-valid.length} need correction or are duplicates.`;$("confirmComponentCsv").disabled=!valid.length;}catch(err){$("componentCsvError").textContent=err.message;}};
+  $("confirmComponentCsv").onclick=async()=>{const b=$("confirmComponentCsv");b.disabled=true;b.textContent='Importing...';try{const {data,error}=await db.rpc('atl_import_components',{p_rows:valid});if(error)throw error;await logActivity('CSV IMPORT COMPONENTS',`${data?.imported_count??valid.length} components imported`);showToast(`${data?.imported_count??valid.length} components imported.`);await renderComponents();}catch(err){$("componentCsvError").textContent='Import failed. No rows were committed: '+err.message;b.disabled=false;b.textContent='Import valid components';}};
 }
 
 async function loadScriptOnce(src,test){if(test())return;await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error('Could not load document reader library. Check your internet connection and try again.'));document.head.appendChild(s);});}
@@ -3785,7 +3662,7 @@ async function renderBillToCsv(){
   <div class="table-wrap"><table><thead><tr><th>Item / component</th><th>Quantity</th><th>Rate</th><th>Line total</th></tr></thead><tbody id="billRowsPreview"><tr><td colspan="4" class="empty">No bill items extracted yet.</td></tr></tbody></table></div>
   <div class="modal-actions"><button class="btn btn-primary" id="downloadBillCsv" disabled>⬇ Download component CSV</button></div><div class="small muted">CSV output uses name, component_code, total_quantity, minimum_stock. Code and minimum stock can be completed after import.</div><div id="billToolError" class="error"></div></div>`;
   bindComponentToolsBack();let billItems=[];
-  $("readBillButton").onclick=async()=>{const f=$("billSourceFile").files[0];if(!f){$("billToolError").textContent='Choose a PDF or image first.';return;}const status=$("billReadStatus");status.textContent='Reading file...';$("billToolError").textContent='';try{let text='';if(f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf')){await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',()=>!!window.pdfjsLib);pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;for(let n=1;n<=pdf.numPages;n++){const page=await pdf.getPage(n);const content=await page.getTextContent();text+=content.items.map(x=>x.str).join(' ')+'\n';}if(text.trim().length<20){await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',()=>!!window.Tesseract);for(let n=1;n<=pdf.numPages;n++){const page=await pdf.getPage(n);const viewport=page.getViewport({scale:1.7});const canvas=document.createElement('canvas');canvas.width=viewport.width;canvas.height=viewport.height;await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;const out=await Tesseract.recognize(canvas,'eng');text+=out.data.text+'\n';}}}else{await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',()=>!!window.Tesseract);const out=await Tesseract.recognize(f,'eng');text=out.data.text;}$("billExtractedText").value=text;status.textContent='Read complete. Check the text and build the item preview.';}catch(err){status.textContent='';$("billToolError").textContent=err.message;}};
+  $("readBillButton").onclick=async()=>{const f=$("billSourceFile").files[0];if(!f){$("billToolError").textContent='Choose a PDF or image first.';return;}if(f.size>12*1024*1024){$("billToolError").textContent='Bill file is larger than 12 MB. Compress it or upload fewer pages.';return;}const status=$("billReadStatus");status.textContent='Reading file...';$("billToolError").textContent='';try{let text='';if(f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf')){await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',()=>!!window.pdfjsLib);pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;if(pdf.numPages>25)throw Error('This PDF has more than 25 pages. Split it into smaller files.');for(let n=1;n<=pdf.numPages;n++){const page=await pdf.getPage(n);const content=await page.getTextContent();text+=content.items.map(x=>x.str).join(' ')+'\n';}if(text.trim().length<20){await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',()=>!!window.Tesseract);for(let n=1;n<=pdf.numPages;n++){const page=await pdf.getPage(n);const viewport=page.getViewport({scale:1.7});const canvas=document.createElement('canvas');canvas.width=viewport.width;canvas.height=viewport.height;await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;const out=await Tesseract.recognize(canvas,'eng');text+=out.data.text+'\n';}}}else{await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',()=>!!window.Tesseract);const out=await Tesseract.recognize(f,'eng');text=out.data.text;}$("billExtractedText").value=text;status.textContent='Read complete. Check the text and build the item preview.';}catch(err){status.textContent='';$("billToolError").textContent=err.message;}};
   $("parseBillRows").onclick=()=>{const lines=$("billExtractedText").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);billItems=[];for(const line of lines){if(/subtotal|grand total|invoice|taxable|gstin|phone|address|total amount|discount/i.test(line))continue;const m=line.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s+(?:₹|Rs\.?\s*)?(\d+(?:\.\d{1,2})?)\s+(?:₹|Rs\.?\s*)?(\d+(?:\.\d{1,2})?)\s*$/i);if(m){const name=m[1].replace(/[|:]+$/,'').trim();if(name.length>1)billItems.push({name,quantity:Number(m[2]),rate:Number(m[3]),line_total:Number(m[4])});}}$("billRowsPreview").innerHTML=billItems.map(x=>`<tr><td>${escapeHTML(x.name)}</td><td>${x.quantity}</td><td>${x.rate.toFixed(2)}</td><td>${x.line_total.toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">No clear item rows detected. Edit the extracted text so each item line ends with: quantity rate total, then try again.</td></tr>';
   $("downloadBillCsv").disabled=!billItems.length;};
   $("downloadBillCsv").onclick=()=>downloadCsv('supplier_bill_components.csv',['name','component_code','total_quantity','minimum_stock'],billItems.map(x=>[x.name,'',x.quantity,0]));
@@ -3795,8 +3672,8 @@ async function renderDamagedComponents(){
   $("pageContent").innerHTML=componentToolHeader('Damaged Components','Record broken or faulty stock, reduce available quantity and keep a damage history.')+`
   <div class="panel"><h3>Record damaged component</h3><form id="damageForm"><div class="form-grid"><div class="field"><label>Component *</label><select id="damageComponent" required></select></div><div class="field"><label>Damaged quantity *</label><input id="damageQty" type="number" min="1" step="1" required value="1"></div><div class="field"><label>Date *</label><input id="damageDate" type="date" required value="${todayLocal()}"></div><div class="field"><label>Condition</label><select id="damageCondition"><option>Needs testing</option><option>Repairable</option><option>Not repairable</option><option>Discarded</option></select></div></div><div class="field"><label>What happened? / Visible damage *</label><textarea id="damageReason" rows="3" required placeholder="Example: LED legs bent; component overheated; motor shaft stuck..."></textarea></div><div class="field"><label>Action taken / notes</label><textarea id="damageNotes" rows="2" placeholder="Kept in labelled damaged-parts box; teacher checked..."></textarea></div><div id="damageError" class="error"></div><button class="btn btn-primary">Save damage record and update stock</button></form></div>
   <div class="panel"><h3>Damage history</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Component</th><th>Qty</th><th>Condition</th><th>Reason</th><th>Recorded by</th></tr></thead><tbody id="damageHistory"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody></table></div></div>`;
-  bindComponentToolsBack();try{const comps=await fetchComponents(false);$("damageComponent").innerHTML='<option value="">Choose component</option>'+comps.map(c=>`<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)} (available: ${Number(c.available_quantity||0)})</option>`).join('');const {data,error}=await db.from('component_damage_reports').select('*').order('created_at',{ascending:false}).limit(100);if(error)throw error;$("damageHistory").innerHTML=(data||[]).map(x=>`<tr><td>${formatDate(x.damage_date)}</td><td>${escapeHTML(x.component_name)}</td><td>${x.quantity}</td><td>${escapeHTML(x.condition_status)}</td><td>${escapeHTML(x.reason)}</td><td>${escapeHTML(x.recorded_by_name||'—')}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No damage reports yet.</td></tr>';}catch(err){$("damageHistory").innerHTML=`<tr><td colspan="6" class="error">${escapeHTML(err.message)}. Run the component tools SQL migration.</td></tr>`;}
-  $("damageForm").onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;$("damageError").textContent='';try{const c=componentCache.find(x=>x.id===$("damageComponent").value)||await (async()=>{const {data,error}=await db.from('components').select('*').eq('id',$('damageComponent').value).single();if(error)throw error;return data;})();const qty=Number($("damageQty").value),available=Number(c.available_quantity||0);if(!c)throw Error('Choose a component.');if(!Number.isInteger(qty)||qty<1)throw Error('Enter a valid whole-number quantity.');if(qty>available)throw Error(`Only ${available} units are available. Check the quantity.`);const {error:updateError}=await db.from('components').update({available_quantity:available-qty}).eq('id',c.id);if(updateError)throw updateError;const {error}=await db.from('component_damage_reports').insert({component_id:String(c.id),component_name:c.name,quantity:qty,damage_date:$('damageDate').value,condition_status:$('damageCondition').value,reason:$('damageReason').value.trim(),notes:$('damageNotes').value.trim()||null,recorded_by:currentUser.id,recorded_by_name:currentProfile?.username||currentUser.email,stock_before:available,stock_after:available-qty});if(error){await db.from('components').update({available_quantity:available}).eq('id',c.id);throw error;}await logActivity('RECORD COMPONENT DAMAGE',`${c.name}: ${qty} units`);showToast('Damage record saved and available stock reduced.');await renderDamagedComponents();}catch(err){$("damageError").textContent=err.message;b.disabled=false;}};
+  bindComponentToolsBack();try{const comps=await fetchComponents(false);$("damageComponent").innerHTML='<option value="">Choose component</option>'+comps.map(c=>`<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)} (available: ${Number(c.available_quantity||0)})</option>`).join('');const {data,error}=await db.from('component_damage_reports').select('*').eq('deleted',false).order('created_at',{ascending:false}).limit(100);if(error)throw error;$("damageHistory").innerHTML=(data||[]).map(x=>`<tr><td>${formatDate(x.damage_date)}</td><td>${escapeHTML(x.component_name)}</td><td>${x.quantity}</td><td>${escapeHTML(x.condition_status)}</td><td>${escapeHTML(x.reason)}</td><td>${escapeHTML(x.recorded_by_name||'—')}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No damage reports yet.</td></tr>';}catch(err){$("damageHistory").innerHTML=`<tr><td colspan="6" class="error">${escapeHTML(err.message)}. Run the component tools SQL migration.</td></tr>`;}
+  $("damageForm").onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;$("damageError").textContent='';try{const c=comps.find(x=>String(x.id)===$("damageComponent").value);const qty=Number($("damageQty").value);if(!c)throw Error('Choose a component.');if(!Number.isInteger(qty)||qty<1)throw Error('Enter a valid whole-number quantity.');const {error}=await db.rpc('atl_record_component_damage',{p_component_id:String(c.id),p_quantity:qty,p_damage_date:$('damageDate').value,p_condition_status:$('damageCondition').value,p_reason:$('damageReason').value.trim(),p_notes:$('damageNotes').value.trim()||null});if(error)throw error;await logActivity('RECORD COMPONENT DAMAGE',`${c.name}: ${qty} units`);showToast('Damage record saved and available stock reduced.');await renderDamagedComponents();}catch(err){$("damageError").textContent=err.message;b.disabled=false;}};
 }
 
 const COMPONENT_TEST_GUIDES={
@@ -3826,7 +3703,7 @@ async function renderComponentTestGuide(){
   <div class="panel"><div class="form-grid"><div class="field"><label>Select component in inventory</label><select id="testComponentSelect"><option value="">Choose component</option></select></div><div class="field"><label>Or choose a common component guide</label><select id="testGuideSelect"><option value="">Choose a guide</option>${Object.keys(COMPONENT_TEST_GUIDES).map(k=>`<option>${escapeHTML(k)}</option>`).join('')}</select></div></div><div id="testGuideContent" class="notice">Select a component or guide to see its testing instructions.</div></div>
   <div class="panel"><h3>Save a test result</h3><form id="componentTestForm"><div class="form-grid"><div class="field"><label>Component *</label><select id="testRecordComponent" required></select></div><div class="field"><label>Test result *</label><select id="testResult"><option>Passed</option><option>Failed</option><option>Needs further testing</option></select></div><div class="field"><label>Test date *</label><input id="testDate" type="date" value="${todayLocal()}" required></div><div class="field"><label>Tested by</label><input id="testedBy" value="${escapeHTML(currentProfile?.username||'Lab Admin')}"></div></div><div class="field"><label>Observations / fault found</label><textarea id="testNotes" rows="3" placeholder="What did you observe? Which step passed or failed?"></textarea></div><div id="testSaveError" class="error"></div><button class="btn btn-primary">Save test record</button></form></div>
   <div class="panel"><h3>Recent test history</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Component</th><th>Result</th><th>Tested by</th><th>Notes</th></tr></thead><tbody id="componentTestHistory"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody></table></div></div>`;
-  bindComponentToolsBack();let comps=[];try{comps=await fetchComponents(false);const opts='<option value="">Choose component</option>'+comps.map(c=>`<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');$("testComponentSelect").innerHTML=opts;$("testRecordComponent").innerHTML=opts;const {data,error}=await db.from('component_test_records').select('*').order('created_at',{ascending:false}).limit(100);if(error)throw error;$("componentTestHistory").innerHTML=(data||[]).map(x=>`<tr><td>${formatDate(x.test_date)}</td><td>${escapeHTML(x.component_name)}</td><td><span class="tag">${escapeHTML(x.result)}</span></td><td>${escapeHTML(x.tested_by||'—')}</td><td>${escapeHTML(x.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No test records yet.</td></tr>';}catch(err){$("componentTestHistory").innerHTML=`<tr><td colspan="5" class="error">${escapeHTML(err.message)}. Run the component tools SQL migration.</td></tr>`;}
+  bindComponentToolsBack();let comps=[];try{comps=await fetchComponents(false);const opts='<option value="">Choose component</option>'+comps.map(c=>`<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');$("testComponentSelect").innerHTML=opts;$("testRecordComponent").innerHTML=opts;const {data,error}=await db.from('component_test_records').select('*').eq('deleted',false).order('created_at',{ascending:false}).limit(100);if(error)throw error;$("componentTestHistory").innerHTML=(data||[]).map(x=>`<tr><td>${formatDate(x.test_date)}</td><td>${escapeHTML(x.component_name)}</td><td><span class="tag">${escapeHTML(x.result)}</span></td><td>${escapeHTML(x.tested_by||'—')}</td><td>${escapeHTML(x.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No test records yet.</td></tr>';}catch(err){$("componentTestHistory").innerHTML=`<tr><td colspan="5" class="error">${escapeHTML(err.message)}. Run the component tools SQL migration.</td></tr>`;}
   const showGuide=key=>{const g=COMPONENT_TEST_GUIDES[key];if(!g)return;$("testGuideContent").innerHTML=`<h3>${escapeHTML(key)} — ${escapeHTML(g.level)}</h3><p><strong>What it does:</strong> ${escapeHTML(g.purpose)}</p><p><strong>Tools:</strong> ${escapeHTML(g.tools)}</p><h4>Test steps</h4><ol>${g.steps.map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ol><p><strong>Expected result:</strong> ${escapeHTML(g.expected)}</p><p><strong>If it fails — debug:</strong> ${escapeHTML(g.faults)}</p><p><strong>Safety:</strong> ${escapeHTML(g.safety)}</p>`;};
   $("testGuideSelect").onchange=e=>showGuide(e.target.value);$("testComponentSelect").onchange=e=>{const c=comps.find(x=>x.id===e.target.value);const g=c&&findGuideForComponent(c.name);if(g){$("testGuideSelect").value=g.key;showGuide(g.key);}else{$("testGuideContent").innerHTML='<p>No built-in guide matches this component yet. Select a common guide above or ask your teacher to add a verified procedure for this exact part number.</p>';}};
   $("componentTestForm").onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;$("testSaveError").textContent='';try{const c=comps.find(x=>x.id===$("testRecordComponent").value);if(!c)throw Error('Choose a component.');const {error}=await db.from('component_test_records').insert({component_id:String(c.id),component_name:c.name,test_date:$('testDate').value,result:$('testResult').value,tested_by:$('testedBy').value.trim()||'Lab Admin',notes:$('testNotes').value.trim()||null,recorded_by:currentUser.id});if(error)throw error;await logActivity('COMPONENT TEST',`${c.name}: ${$('testResult').value}`);showToast('Test result saved.');await renderComponentTestGuide();}catch(err){$("testSaveError").textContent=err.message;b.disabled=false;}};
@@ -3905,6 +3782,9 @@ setupCsvUpload();
 
 document.querySelectorAll(".nav-btn[data-page]").forEach(button => {
   button.addEventListener("click",() => navigate(button.dataset.page));
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") $("sidebar").classList.remove("open");
 });
 
 
