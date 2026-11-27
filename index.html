@@ -2758,9 +2758,36 @@ async function saveComponent(event) {
   }
 }
 
+// A component with any issue history must remain in inventory so that
+// old issue/return records and stock audit history keep their component link.
+async function assertComponentHasNoIssueHistory(componentId) {
+  const { data, error } = await db
+    .from("component_issues")
+    .select("id")
+    .eq("component_id", componentId)
+    .limit(1);
+
+  if (error) throw error;
+
+  if (data && data.length > 0) {
+    throw new Error(
+      "This component cannot be deleted because it has been issued to someone before. " +
+      "Keep it in Components so its issue, return and stock history remain available."
+    );
+  }
+}
+
 async function moveComponentToTrash(id) {
-  const component = componentCache.find(item => item.id === id);
+  const component = componentCache.find(item => String(item.id) === String(id));
   const componentName = component?.name || "this component";
+
+  try {
+    await assertComponentHasNoIssueHistory(id);
+  } catch (error) {
+    await atlAlert(error.message, "Component cannot be deleted", "🔒");
+    return;
+  }
+
   const confirmed = await atlConfirm(
     `Move ${componentName} to Trash?`,
     "Move component to Trash",
@@ -2862,6 +2889,13 @@ async function restoreComponent(id) {
 async function permanentlyDeleteComponent(id) {
   if (!isAdmin()) {
     await atlAlert("Only Admin can permanently delete components.", "Access denied", "🔒");
+    return;
+  }
+
+  try {
+    await assertComponentHasNoIssueHistory(id);
+  } catch (error) {
+    await atlAlert(error.message, "Component cannot be deleted", "🔒");
     return;
   }
 
@@ -3030,7 +3064,7 @@ function drawIssueRows(rows) {
           <div class="actions">
             ${outstanding > 0 ? `<button class="btn btn-success" data-issue-return="${issue.id}">Return</button>` : ""}
             <button class="btn btn-outline" data-issue-history="${issue.id}">History</button>
-            <button class="btn btn-danger" data-issue-trash="${issue.id}" ${outstanding > 0 ? 'disabled title="Return all outstanding components before deleting this issue record."' : ''}>Delete</button>
+            <button class="btn btn-danger" data-issue-trash="${issue.id}" ${outstanding > 0 ? 'disabled title="Return all outstanding components before deleting this issue record."' : ''}>${outstanding > 0 ? "Return first" : "Delete"}</button>
           </div>
         </td>
       </tr>
