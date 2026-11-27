@@ -309,7 +309,7 @@ td{vertical-align:middle}
       <div class="form-grid">
         <div class="field"><label>Student ID *</label><input id="studentId" required placeholder="e.g. ATL-001"></div>
         <div class="field"><label>Student Name *</label><input id="studentName" required placeholder="Full name"></div>
-        <div class="field"><label>Class</label><input id="studentClass" placeholder="e.g. Class 6"></div>
+        <div class="field"><label>Class</label><input id="studentClass" placeholder="e.g. Class 6"></div><div class="field"><label>Batch</label><input id="studentBatch" placeholder="e.g. Robotics Batch A"></div><div class="field"><label>Total Course Fee (₹)</label><input id="studentFee" type="number" min="0" step="0.01" placeholder="0.00"></div>
         <div class="field"><label>Student Phone</label><input id="studentPhone" placeholder="Phone number"></div>
         <div class="field"><label>Parent Phone</label><input id="parentPhone" placeholder="Parent phone"></div>
         <div class="field"><label>Email</label><input id="studentEmail" type="email" placeholder="Email address"></div>
@@ -343,7 +343,7 @@ td{vertical-align:middle}
       <h2>Import Students from CSV</h2>
       <button class="btn btn-outline" id="closeCsvModal">✕</button>
     </div>
-    <div class="notice">Required columns: Student ID and Student Name. Optional: Class, Student Phone, Parent Phone, Email, Interests, Record Date.</div>
+    <div class="notice">Required columns: Student ID and Student Name. Optional: Class, Batch, Total Fee, Student Phone, Parent Phone, Email, Interests, Record Date.</div>
     <div class="csv-file" id="csvDropZone">
       <div style="font-size:35px">📄</div>
       <h3>Upload your student CSV</h3>
@@ -1015,8 +1015,10 @@ async function renderStudents() {
     <div class="panel">
       <div class="toolbar">
         <div class="search">
-          <input id="studentSearch" placeholder="Search by ID, name, class, phone or interest...">
+          <input id="studentSearch" placeholder="Search by ID, name, class, batch, phone or interest...">
         </div>
+        <select id="studentBatchFilter"><option value="">All batches</option></select>
+        <select id="studentClassFilter"><option value="">All classes</option></select>
         <button class="btn btn-outline" id="reloadStudents">↻ Refresh</button>
         <button class="btn btn-outline" id="openTrash">View Trash</button>
       </div>
@@ -1027,7 +1029,7 @@ async function renderStudents() {
         <table>
           <thead>
             <tr>
-              <th>Student ID</th><th>Name</th><th>Class</th>
+              <th>Student ID</th><th>Name</th><th>Class</th><th>Batch</th>
               <th>Phone</th><th>Interests</th><th>Actions</th>
             </tr>
           </thead>
@@ -1042,9 +1044,15 @@ async function renderStudents() {
   $("reloadStudents").onclick = renderStudents;
   $("openTrash").onclick = () => navigate("Trash");
   $("studentSearch").addEventListener("input",filterStudents);
+  $("studentBatchFilter").onchange=filterStudents;
+  $("studentClassFilter").onchange=filterStudents;
 
   try {
     studentCache = await fetchStudents(false);
+    const batches=[...new Set(studentCache.map(x=>x.batch_name).filter(Boolean))].sort();
+    const classes=[...new Set(studentCache.map(x=>x.student_class).filter(Boolean))].sort();
+    $("studentBatchFilter").innerHTML=`<option value="">All batches</option>`+batches.map(x=>`<option>${escapeHTML(x)}</option>`).join("");
+    $("studentClassFilter").innerHTML=`<option value="">All classes</option>`+classes.map(x=>`<option>${escapeHTML(x)}</option>`).join("");
     drawStudentRows(studentCache);
   } catch (error) {
     $("studentsTable").innerHTML = `
@@ -1066,10 +1074,10 @@ function filterStudents() {
       student.phone,
       student.parent_phone,
       student.email,
-      student.interests
+      student.interests, student.batch_name
     ].join(" ").toLowerCase();
 
-    return searchable.includes(term);
+    return searchable.includes(term) && (!$("studentBatchFilter")?.value || student.batch_name === $("studentBatchFilter").value) && (!$("studentClassFilter")?.value || student.student_class === $("studentClassFilter").value);
   });
 
   drawStudentRows(filtered);
@@ -1080,7 +1088,7 @@ function drawStudentRows(rows) {
 
   if (!rows.length) {
     $("studentsTable").innerHTML = `
-      <tr><td colspan="6" class="empty">
+      <tr><td colspan="7" class="empty">
         No students found. Click Add Student to create one.
       </td></tr>`;
     return;
@@ -1091,6 +1099,7 @@ function drawStudentRows(rows) {
       <td><strong>${escapeHTML(student.id)}</strong></td>
       <td>${escapeHTML(student.name)}</td>
       <td><span class="tag">${escapeHTML(student.student_class || "—")}</span></td>
+      <td><span class="tag">${escapeHTML(student.batch_name || "—")}</span></td>
       <td>${escapeHTML(student.phone || "—")}</td>
       <td>${escapeHTML(student.interests || "—")}</td>
       <td>
@@ -1131,6 +1140,8 @@ function openStudentForm(student=null) {
   $("studentId").value = student?.id || "";
   $("studentName").value = student?.name || "";
   $("studentClass").value = student?.student_class || "";
+  $("studentBatch").value = student?.batch_name || "";
+  $("studentFee").value = student?.fee_total ?? "";
   $("studentPhone").value = student?.phone || "";
   $("parentPhone").value = student?.parent_phone || "";
   $("studentEmail").value = student?.email || "";
@@ -1159,6 +1170,8 @@ async function saveStudent(event) {
     id:$("studentId").value.trim(),
     name:$("studentName").value.trim(),
     student_class:$("studentClass").value.trim() || null,
+    batch_name:$("studentBatch").value.trim() || null,
+    fee_total:Number($("studentFee").value || 0),
     phone:$("studentPhone").value.trim() || null,
     parent_phone:$("parentPhone").value.trim() || null,
     email:$("studentEmail").value.trim() || null,
@@ -3187,6 +3200,8 @@ async function handleCsvFile(event) {
       id:getCsvColumn(row,headerMap,idHeader),
       name:getCsvColumn(row,headerMap,nameHeader),
       student_class:getCsvColumn(row,headerMap,["Class","Student Class"]),
+      batch_name:getCsvColumn(row,headerMap,["Batch","Batch Name","Group"]),
+      fee_total:getCsvColumn(row,headerMap,["Total Fee","Fee","Course Fee"]),
       phone:getCsvColumn(row,headerMap,["Student Phone","Phone","Phone Number"]),
       parent_phone:getCsvColumn(row,headerMap,["Parent Phone","ParentPhone","Guardian Phone"]),
       email:getCsvColumn(row,headerMap,["Email","Email Address"]),
@@ -3252,7 +3267,7 @@ function drawCsvPreview() {
 
   $("csvPreviewHead").innerHTML = `
     <tr>
-      <th>Status</th><th>Student ID</th><th>Name</th><th>Class</th>
+      <th>Status</th><th>Student ID</th><th>Name</th><th>Class</th><th>Batch</th><th>Fee</th>
       <th>Phone</th><th>Parent Phone</th><th>Email</th><th>Interests</th>
     </tr>
   `;
@@ -3268,6 +3283,8 @@ function drawCsvPreview() {
       <td>${escapeHTML(row.id)}</td>
       <td>${escapeHTML(row.name)}</td>
       <td>${escapeHTML(row.student_class)}</td>
+      <td>${escapeHTML(row.batch_name)}</td>
+      <td>${escapeHTML(row.fee_total)}</td>
       <td>${escapeHTML(row.phone)}</td>
       <td>${escapeHTML(row.parent_phone)}</td>
       <td>${escapeHTML(row.email)}</td>
@@ -3301,6 +3318,8 @@ async function importCsvStudents() {
       id:row.id,
       name:row.name,
       student_class:row.student_class || null,
+      batch_name:row.batch_name || null,
+      fee_total:Number(row.fee_total || 0),
       phone:row.phone || null,
       parent_phone:row.parent_phone || null,
       email:row.email || null,
@@ -3381,9 +3400,9 @@ function setupCsvUpload() {
 
 function downloadCsvTemplate() {
   const content = [
-    "Student ID,Student Name,Class,Student Phone,Parent Phone,Email,Interests,Record Date",
-    "ATL-001,Aarav Kumar,Class 6,9876543210,9876543211,aarav@example.com,Robotics Arduino,2026-11-25",
-    "ATL-002,Diya Nair,Class 7,9876543220,9876543221,diya@example.com,Electronics Coding,2026-11-25"
+    "Student ID,Student Name,Class,Batch,Total Fee,Student Phone,Parent Phone,Email,Interests,Record Date",
+    "ATL-001,Aarav Kumar,Class 6,Robotics Batch A,5000,9876543210,9876543211,aarav@example.com,Robotics Arduino,2026-11-25",
+    "ATL-002,Diya Nair,Class 7,Electronics Batch B,6500,9876543220,9876543221,diya@example.com,Electronics Coding,2026-11-25"
   ].join("\r\n");
 
   const blob = new Blob(["\uFEFF"+content],{type:"text/csv;charset=utf-8;"});
@@ -3542,7 +3561,7 @@ async function recordJobPayment(jobId) {
     const saveButton=modal.querySelector("#savePrintingPayment");
     saveButton.disabled=true;saveButton.textContent="Saving...";errorBox.textContent="";
     try{
-      const {error}=await db.from("atl_payments").insert({printing_job_id:job.id,customer_name:job.customer_name,amount:Number(amount.toFixed(2)),payment_method:method,received_by:receiver,payment_date:todayLocal(),created_by:currentUser.id,deleted:false});
+      const {error}=await db.from("atl_payments").insert({printing_job_id:job.id,payment_type:"3D Printing",customer_name:job.customer_name,amount:Number(amount.toFixed(2)),payment_method:method,received_by:receiver,payment_date:todayLocal(),created_by:currentUser.id,deleted:false});
       if(error)throw error;
       document.removeEventListener("keydown",onEscape);
       close();showToast("Payment recorded successfully.");await loadPrintingJobs();
@@ -3664,30 +3683,41 @@ async function permanentlyDeletePrintingJob(jobId) {
 }
 
 /* =========================================================
-   PAYMENTS
+   PAYMENTS - STUDENT FEES + PRINTING + GENERAL
 ========================================================= */
-async function renderPayments() {
-  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Payments</h1><p>Record lab receipts and monitor outstanding balances.</p></div><button class="btn btn-outline" id="refreshPayments">↻ Refresh</button></div>
-  <div class="cards"><div class="stat-card"><div class="stat-title">Total received</div><div class="stat-number" id="paymentTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Payment records</div><div class="stat-number" id="paymentCount">0</div></div></div>
-  <div class="panel"><h3>Record a payment</h3><form id="generalPaymentForm"><div class="form-grid">
-  <div class="field"><label>Customer / Student *</label><input id="payCustomer" required></div><div class="field"><label>Amount (₹) *</label><input id="payAmount" type="number" min="0.01" step="0.01" required></div>
-  <div class="field"><label>Payment method *</label><select id="payMethod"><option>GPay</option><option>Cash</option><option>Other</option></select></div><div class="field"><label>Received by</label><input id="payReceiver" value="Lab Admin"></div>
-  <div class="field"><label>Payment date *</label><input id="payDate" type="date" required></div><div class="field"><label>Reference / Transaction ID</label><input id="payReference"></div>
-  <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="payNotes" rows="2"></textarea></div></div><button class="btn btn-primary" id="saveGeneralPayment" type="submit">Save payment</button><div id="paymentError" class="error"></div></form></div>
-  <div class="panel"><div class="toolbar"><div class="search"><input id="paymentSearch" placeholder="Search customer, method or reference..."></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Received by</th><th>Reference</th><th>Linked job</th></tr></thead><tbody id="paymentsTable"></tbody></table></div></div>`;
-  $("payDate").value=todayLocal(); $("refreshPayments").onclick=renderPayments; $("paymentSearch").oninput=drawPayments; $("generalPaymentForm").onsubmit=saveGeneralPayment;
-  await loadPayments();
+let paymentStudents=[]; let paymentJobs=[];
+function money(value){return "₹"+Number(value||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function studentPaidTotal(id){return paymentsCache.filter(p=>p.student_id===id && p.payment_type==="Student Fee").reduce((a,p)=>a+Number(p.amount||0),0);}
+function jobPaidTotal(id){return paymentsCache.filter(p=>p.printing_job_id===id).reduce((a,p)=>a+Number(p.amount||0),0);}
+async function renderPayments(){
+  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Payments</h1><p>All receipts, advance payments and outstanding balances.</p></div><button class="btn btn-outline" id="refreshPayments">↻ Refresh</button></div>
+  <div class="cards"><div class="stat-card"><div class="stat-title">Total received</div><div class="stat-number" id="paymentTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Student fee balance</div><div class="stat-number" id="studentBalanceTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Printing balance</div><div class="stat-number" id="printingBalanceTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Payment records</div><div class="stat-number" id="paymentCount">0</div></div></div>
+  <div class="panel"><h3>Record a payment</h3><form id="generalPaymentForm"><div class="form-grid"><div class="field"><label>Category *</label><select id="payType"><option>Student Fee</option><option>3D Printing</option><option>General</option></select></div><div class="field" id="payStudentWrap"><label>Student *</label><select id="payStudent"><option value="">Select student</option></select></div><div class="field hidden" id="payJobWrap"><label>Printing job *</label><select id="payJob"><option value="">Select job</option></select></div><div class="field"><label>Customer / Student *</label><input id="payCustomer" required></div><div class="field"><label>Amount (₹) *</label><input id="payAmount" type="number" min="0.01" step="0.01" required></div><div class="field"><label>Method *</label><select id="payMethod"><option>GPay</option><option>Cash</option><option>Other</option></select></div><div class="field"><label>Received by</label><input id="payReceiver" value="Lab Admin"></div><div class="field"><label>Date *</label><input id="payDate" type="date" required></div><div class="field"><label>Reference / Transaction ID</label><input id="payReference"></div><div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="payNotes" rows="2"></textarea></div></div><div class="notice" id="paymentContext">Select a student or printing job to see the balance.</div><button class="btn btn-primary" id="saveGeneralPayment" type="submit">Save payment</button><div id="paymentError" class="error"></div></form></div>
+  <div class="panel"><div class="toolbar"><h3 style="margin:0">Student fee balances</h3><div class="search"><input id="feeSearch" placeholder="Search student, class or batch..."></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Class</th><th>Batch</th><th>Total fee</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="studentFeeTable"></tbody></table></div></div>
+  <div class="panel"><div class="toolbar"><h3 style="margin:0">All payment history</h3><div class="search"><input id="paymentSearch" placeholder="Search customer, method or reference..."></div><select id="paymentFilter"><option>All</option><option>Student Fee</option><option>3D Printing</option><option>General</option></select></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Category</th><th>Amount</th><th>Method</th><th>Received by</th><th>Reference</th><th>Status</th></tr></thead><tbody id="paymentsTable"></tbody></table></div></div>`;
+  $("payDate").value=todayLocal(); $("refreshPayments").onclick=renderPayments; $("generalPaymentForm").onsubmit=saveGeneralPayment; $("payType").onchange=updatePaymentCategory; $("payStudent").onchange=updatePaymentContext; $("payJob").onchange=updatePaymentContext; $("paymentSearch").oninput=drawPayments; $("paymentFilter").onchange=drawPayments; $("feeSearch").oninput=drawStudentFeeBalances; await loadPayments();
 }
-
-async function loadPayments() {
-  const {data,error}=await db.from("atl_payments").select("*").eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false});
-  if(error){$("paymentsTable").innerHTML=`<tr><td colspan="7" class="empty">Could not load payments: ${escapeHTML(error.message)}. Run the ATL payments SQL migration.</td></tr>`;return;}
-  paymentsCache=data||[]; $("paymentTotal").textContent=money(paymentsCache.reduce((a,p)=>a+Number(p.amount||0),0)); $("paymentCount").textContent=paymentsCache.length; drawPayments();
+async function loadPayments(){
+ const [p,s,j]=await Promise.all([db.from("atl_payments").select("*").eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false}),db.from("students").select("id,name,student_class,batch_name,fee_total").eq("deleted",false).order("name"),db.from("printing_jobs").select("id,job_code,customer_name,model_name,amount").eq("deleted",false)]);
+ if(p.error){$("paymentsTable").innerHTML=`<tr><td colspan="8" class="empty">${escapeHTML(p.error.message)}</td></tr>`;return;} if(s.error){$("paymentError").textContent=s.error.message;return;} if(j.error){$("paymentError").textContent=j.error.message;return;}
+ paymentsCache=p.data||[];paymentStudents=s.data||[];paymentJobs=j.data||[];
+ $("payStudent").innerHTML='<option value="">Select student</option>'+paymentStudents.map(x=>`<option value="${escapeHTML(x.id)}">${escapeHTML(x.name)} (${escapeHTML(x.id)})</option>`).join("");
+ $("payJob").innerHTML='<option value="">Select job</option>'+paymentJobs.map(x=>`<option value="${escapeHTML(x.id)}">${escapeHTML(x.job_code||x.model_name)} — ${escapeHTML(x.customer_name)}</option>`).join("");
+ $("paymentTotal").textContent=money(paymentsCache.reduce((a,x)=>a+Number(x.amount||0),0));$("paymentCount").textContent=paymentsCache.length;
+ $("studentBalanceTotal").textContent=money(paymentStudents.reduce((a,x)=>a+Math.max(Number(x.fee_total||0)-studentPaidTotal(x.id),0),0));$("printingBalanceTotal").textContent=money(paymentJobs.reduce((a,x)=>a+Math.max(Number(x.amount||0)-jobPaidTotal(x.id),0),0));
+ drawPayments();drawStudentFeeBalances();updatePaymentCategory();
 }
+function updatePaymentCategory(){const t=$("payType").value;$("payStudentWrap").classList.toggle("hidden",t!=="Student Fee");$("payJobWrap").classList.toggle("hidden",t!=="3D Printing");$("payStudent").required=t==="Student Fee";$("payJob").required=t==="3D Printing";$("payCustomer").readOnly=t!=="General";if(t==="General")$("payCustomer").value="";updatePaymentContext();}
+function updatePaymentContext(){const t=$("payType").value;if(t==="Student Fee"){const x=paymentStudents.find(a=>a.id===$("payStudent").value);if(!x){$("paymentContext").textContent="Select a student to view fee details.";return;}const paid=studentPaidTotal(x.id),fee=Number(x.fee_total||0);$("payCustomer").value=x.name;$("paymentContext").textContent=`Fee ${money(fee)} · Paid ${money(paid)} · Balance ${money(Math.max(fee-paid,0))} · Batch ${x.batch_name||"Not assigned"}`;}else if(t==="3D Printing"){const x=paymentJobs.find(a=>a.id===$("payJob").value);if(!x){$("paymentContext").textContent="Select a job to view payment details.";return;}const paid=jobPaidTotal(x.id),total=Number(x.amount||0);$("payCustomer").value=x.customer_name;$("paymentContext").textContent=`Total ${money(total)} · Paid ${money(paid)} · Balance ${money(Math.max(total-paid,0))}`;}else $("paymentContext").textContent="General receipt — not linked to a student or printing job.";}
+function drawStudentFeeBalances(){const term=($("feeSearch")?.value||"").toLowerCase();const rows=paymentStudents.filter(x=>[x.name,x.id,x.student_class,x.batch_name].join(" ").toLowerCase().includes(term));$("studentFeeTable").innerHTML=rows.map(x=>{const fee=Number(x.fee_total||0),paid=studentPaidTotal(x.id),bal=Math.max(fee-paid,0),status=fee===0?"Fee not set":bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";return `<tr><td>${escapeHTML(x.name)}<div class="small muted">${escapeHTML(x.id)}</div></td><td>${escapeHTML(x.student_class||"—")}</td><td>${escapeHTML(x.batch_name||"—")}</td><td>${money(fee)}</td><td>${money(paid)}</td><td><strong>${money(bal)}</strong></td><td><span class="tag">${status}</span></td></tr>`;}).join("")||'<tr><td colspan="7" class="empty">No students found.</td></tr>';}
+function drawPayments(){const term=($("paymentSearch")?.value||"").toLowerCase(),filter=$("paymentFilter")?.value||"All";const rows=paymentsCache.filter(x=>(filter==="All"||(x.payment_type||(x.printing_job_id?"3D Printing":"General"))===filter)&&[x.customer_name,x.payment_method,x.received_by,x.reference,x.notes,x.payment_type].join(" ").toLowerCase().includes(term));$("paymentsTable").innerHTML=rows.map(x=>`<tr><td>${formatDate(x.payment_date)}</td><td>${escapeHTML(x.customer_name||"—")}</td><td>${escapeHTML(x.payment_type||(x.printing_job_id?"3D Printing":"General"))}</td><td><strong>${money(x.amount)}</strong></td><td>${escapeHTML(x.payment_method)}</td><td>${escapeHTML(x.received_by||"Lab Admin")}</td><td>${escapeHTML(x.reference||"—")}</td><td><span class="tag">${x.printing_job_id||x.student_id?"Advance / balance tracked":"Received"}</span></td></tr>`).join("")||'<tr><td colspan="8" class="empty">No payment records found.</td></tr>';}
+async function saveGeneralPayment(e){e.preventDefault();const b=$("saveGeneralPayment");b.disabled=true;try{const t=$("payType").value,a=Number($("payAmount").value);if(!(a>0))throw Error("Enter a valid amount.");const data={customer_name:$("payCustomer").value.trim(),amount:Number(a.toFixed(2)),payment_method:$("payMethod").value,received_by:$("payReceiver").value.trim()||"Lab Admin",payment_date:$("payDate").value,payment_type:t,reference:$("payReference").value.trim()||null,notes:$("payNotes").value.trim()||null,created_by:currentUser.id,deleted:false};if(t==="Student Fee"){const x=paymentStudents.find(z=>z.id===$("payStudent").value);if(!x)throw Error("Select a student.");const bal=Math.max(Number(x.fee_total||0)-studentPaidTotal(x.id),0);if(Number(x.fee_total||0)>0&&a>bal+0.005)throw Error("Amount exceeds the remaining student fee balance.");data.student_id=x.id;data.customer_name=x.name;}if(t==="3D Printing"){const x=paymentJobs.find(z=>z.id===$("payJob").value);if(!x)throw Error("Select a printing job.");const bal=Math.max(Number(x.amount||0)-jobPaidTotal(x.id),0);if(a>bal+0.005)throw Error("Amount exceeds the remaining printing balance.");data.printing_job_id=x.id;data.customer_name=x.customer_name;}const {error}=await db.from("atl_payments").insert(data);if(error)throw error;$("generalPaymentForm").reset();$("payDate").value=todayLocal();$("payReceiver").value="Lab Admin";showToast("Payment saved.");await loadPayments();}catch(err){$("paymentError").textContent=err.message;}finally{b.disabled=false;}}
 
-function drawPayments(){if(!$("paymentsTable"))return;const term=($("paymentSearch")?.value||"").toLowerCase().trim();const rows=paymentsCache.filter(p=>[p.customer_name,p.payment_method,p.received_by,p.reference,p.notes].join(" ").toLowerCase().includes(term));$("paymentsTable").innerHTML=rows.length?rows.map(p=>`<tr><td>${formatDate(p.payment_date)}</td><td>${escapeHTML(p.customer_name||"—")}</td><td><strong>${money(p.amount)}</strong></td><td>${escapeHTML(p.payment_method)}</td><td>${escapeHTML(p.received_by||"Lab Admin")}</td><td>${escapeHTML(p.reference||"—")}</td><td>${p.printing_job_id?"3D Printing":"General"}</td></tr>`).join(""):'<tr><td colspan="7" class="empty">No payment records.</td></tr>';}
-
-async function saveGeneralPayment(event){event.preventDefault();const button=$("saveGeneralPayment");button.disabled=true;try{const amount=Number($("payAmount").value);if(amount<=0)throw new Error("Enter a valid amount.");const {error}=await db.from("atl_payments").insert({customer_name:$("payCustomer").value.trim(),amount:Number(amount.toFixed(2)),payment_method:$("payMethod").value,received_by:$("payReceiver").value.trim()||"Lab Admin",payment_date:$("payDate").value,reference:$("payReference").value.trim()||null,notes:$("payNotes").value.trim()||null,created_by:currentUser.id,deleted:false});if(error)throw error;$("generalPaymentForm").reset();$("payDate").value=todayLocal();$("payReceiver").value="Lab Admin";showToast("Payment saved.");await loadPayments();}catch(error){$("paymentError").textContent=error.message;}finally{button.disabled=false;}}
+/* =========================================================
+   YEAR-END ARCHIVE / CLEANUP - ADMIN ONLY
+========================================================= */
+async function renderYearEndCleanup(){if(!isAdmin()){await atlAlert("Only Admin can access year-end cleanup.","Access denied","🔒");return;}const y=new Date().getFullYear()-1;$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Year-end archive & cleanup</h1><p>Archive old records and move them to Trash in one operation.</p></div></div><div class="panel"><div class="notice"><strong>Important:</strong> The system archives records first. It does not instantly erase payment history.</div><div class="form-grid"><div class="field"><label>Archive records before year</label><select id="cleanupYear">${Array.from({length:10},(_,i)=>`<option>${y-i}</option>`).join("")}</select></div><div class="field"><label>Confirmation phrase</label><input id="cleanupConfirmText" placeholder="ARCHIVE AND CLEAR"></div></div><p class="small muted">Includes students, projects, components, component issues, printing jobs and payments.</p><button class="btn btn-danger" id="runYearEndCleanup">Archive & move old records to Trash</button><div id="cleanupMessage" class="error"></div></div>`;$("runYearEndCleanup").onclick=runYearEndCleanup;}
+async function runYearEndCleanup(){if($("cleanupConfirmText").value.trim()!=="ARCHIVE AND CLEAR"){ $("cleanupMessage").textContent="Type ARCHIVE AND CLEAR exactly.";return;}const y=Number($("cleanupYear").value);if(!await atlConfirm(`Archive and move records dated before 1 January ${y} to Trash?`,"Confirm year-end cleanup",true))return;const b=$("runYearEndCleanup");b.disabled=true;b.textContent="Archiving...";try{const {data,error}=await db.rpc("atl_year_end_archive_and_clear",{p_before_date:`${y}-01-01`,p_confirmation:"ARCHIVE AND CLEAR"});if(error)throw error;$("cleanupMessage").textContent=`Completed. ${data?.archived_count??"Records"} archived.`;$("cleanupMessage").className="success";}catch(e){$("cleanupMessage").textContent=e.message;$("cleanupMessage").className="error";}finally{b.disabled=false;b.textContent="Archive & move old records to Trash";}}
 
 /* =========================================================
    BASIC REPORTS AND ADMIN SETTINGS
@@ -3698,7 +3728,7 @@ async function renderReports(){
   try{const [students,projects,components,jobs,payments]=await Promise.all([getCount("students",true),getCount("projects",true),getCount("components",true),getCount("printing_jobs",false),db.from("atl_payments").select("*").eq("deleted",false).order("payment_date",{ascending:false}).limit(10)]);if(payments.error)throw payments.error;const total=(payments.data||[]).reduce((a,p)=>a+Number(p.amount||0),0);const cards=[["Students",students],["Projects",projects],["Components",components],["3D Print Jobs",jobs],["Payments Received",money(total)]];$("reportCards").innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-title">${c[0]}</div><div class="stat-number">${c[1]}</div></div>`).join("");$("reportPayments").innerHTML=(payments.data||[]).map(p=>`<tr><td>${formatDate(p.payment_date)}</td><td>${escapeHTML(p.customer_name||"—")}</td><td>${money(p.amount)}</td><td>${escapeHTML(p.payment_method)}</td><td>${escapeHTML(p.received_by||"Lab Admin")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No payments yet.</td></tr>';}catch(error){$("reportCards").innerHTML=`<div class="notice">Report error: ${escapeHTML(error.message)}</div>`;}
 }
 
-async function renderSettings(){if(!isAdmin()){await atlAlert("Only Admin can access Settings.","Access denied","🔒");return;}$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Settings</h1><p>Administrator information and system status.</p></div></div><div class="panel"><h3>Signed-in administrator</h3><p><strong>Username:</strong> ${escapeHTML(currentProfile?.username||"—")}</p><p><strong>Role:</strong> ${escapeHTML(currentProfile?.role||"—")}</p><p><strong>Email:</strong> ${escapeHTML(currentUser?.email||"—")}</p></div><div class="panel"><h3>Database connection</h3><p class="muted">The application uses Supabase authentication and Row Level Security. Do not disable RLS or expose a service-role key in this HTML file.</p></div>`;}
+async function renderSettings(){if(!isAdmin()){await atlAlert("Only Admin can access Settings.","Access denied","🔒");return;}$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Settings</h1><p>Administrator information and system status.</p></div></div><div class="panel"><h3>Signed-in administrator</h3><p><strong>Username:</strong> ${escapeHTML(currentProfile?.username||"—")}</p><p><strong>Role:</strong> ${escapeHTML(currentProfile?.role||"—")}</p><p><strong>Email:</strong> ${escapeHTML(currentUser?.email||"—")}</p></div><div class="panel"><h3>Year-end archive & cleanup</h3><p class="muted">Archive old records and move them to Trash after a backup.</p><button class="btn btn-danger" id="openYearEndCleanup">Open year-end cleanup</button></div><div class="panel"><h3>Database connection</h3><p class="muted">The application uses Supabase authentication and Row Level Security. Do not disable RLS or expose a service-role key in this HTML file.</p></div>`;$("openYearEndCleanup").onclick=renderYearEndCleanup;}
 
 
 /* =========================================================
