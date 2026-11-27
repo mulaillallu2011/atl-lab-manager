@@ -1060,7 +1060,7 @@ hr { border: 0; border-top: 1px solid #e9eef5; }
 <div class="table-wrap">
 <table>
 <thead>
-<tr><th>Return Date</th><th>Quantity Returned</th><th>Notes</th></tr>
+<tr><th>Return Date</th><th>Quantity Returned</th><th>Notes</th><th>Actions</th></tr>
 </thead>
 <tbody id="issueHistoryTable"></tbody>
 </table>
@@ -1113,6 +1113,7 @@ let issueCache = [];
 let issueComponentCache = [];
 let issueStudentCache = [];
 let selectedReturnIssue = null;
+let selectedHistoryIssue = null;
 
 let toastTimer = null;
 
@@ -2922,7 +2923,8 @@ async function renderIssues() {
         <p>Track components issued to ATL students and external persons.</p>
       </div>
       <div class="toolbar">
-        <button class="btn btn-outline" id="issueTrashButton">🗑 View Trash</button>
+        <button class="btn btn-outline" id="issueTrashButton">🗑 Issue Trash</button>
+        <button class="btn btn-outline" id="returnTrashButton">🗑 Return Trash</button>
         <button class="btn btn-primary" id="newIssueButton">＋ Issue Component</button>
       </div>
     </div>
@@ -2954,6 +2956,7 @@ async function renderIssues() {
 
   $("newIssueButton").onclick = openIssueForm;
   $("issueTrashButton").onclick = renderIssueTrash;
+  $("returnTrashButton").onclick = renderReturnTrash;
   $("refreshIssues").onclick = renderIssues;
   $("issueSearch").addEventListener("input",filterIssues);
 
@@ -3027,7 +3030,7 @@ function drawIssueRows(rows) {
           <div class="actions">
             ${outstanding > 0 ? `<button class="btn btn-success" data-issue-return="${issue.id}">Return</button>` : ""}
             <button class="btn btn-outline" data-issue-history="${issue.id}">History</button>
-            ${outstanding === 0 ? `<button class="btn btn-danger" data-issue-trash="${issue.id}">Trash</button>` : ""}
+            <button class="btn btn-danger" data-issue-trash="${issue.id}" ${outstanding > 0 ? 'disabled title="Return all outstanding components before deleting this issue record."' : ''}>Delete</button>
           </div>
         </td>
       </tr>
@@ -3279,11 +3282,12 @@ async function saveReturn(event) {
 ========================================================= */
 
 async function showIssueHistory(issue) {
+  selectedHistoryIssue = issue;
   $("issueHistoryInfo").textContent =
     `${getIssueComponentName(issue)} · ${issue.person_name} · Issued: ${issue.quantity_issued} · Returned: ${issue.quantity_returned}`;
 
   $("issueHistoryTable").innerHTML = `
-    <tr><td colspan="3" class="empty">Loading return history...</td></tr>`;
+    <tr><td colspan="4" class="empty">Loading return history...</td></tr>`;
 
   $("issueHistoryModal").classList.remove("hidden");
 
@@ -3299,7 +3303,7 @@ async function showIssueHistory(issue) {
 
     if (!data?.length) {
       $("issueHistoryTable").innerHTML = `
-        <tr><td colspan="3" class="empty">No returns have been recorded yet.</td></tr>`;
+        <tr><td colspan="4" class="empty">No active returns have been recorded yet.</td></tr>`;
       return;
     }
 
@@ -3308,14 +3312,18 @@ async function showIssueHistory(issue) {
         <td>${escapeHTML(formatDate(record.return_date))}</td>
         <td><strong>${Number(record.quantity)}</strong></td>
         <td>${escapeHTML(record.notes || "—")}</td>
+        <td><button class="btn btn-danger" data-return-trash="${record.id}">Delete</button></td>
       </tr>
     `).join("");
+
+    $("issueHistoryTable").querySelectorAll("[data-return-trash]").forEach(button => {
+      button.onclick = () => moveReturnToTrash(button.dataset.returnTrash, issue.id);
+    });
   } catch (error) {
     $("issueHistoryTable").innerHTML = `
-      <tr><td colspan="3" class="empty">Could not load return history: ${escapeHTML(error.message)}</td></tr>`;
+      <tr><td colspan="4" class="empty">Could not load return history: ${escapeHTML(error.message)}</td></tr>`;
   }
 }
-
 
 /* =========================================================
    ISSUE RECORD TRASH
@@ -3480,6 +3488,155 @@ async function permanentlyDeleteIssue(id) {
     await renderIssueTrash();
   } catch (error) {
     await atlAlert("Permanent deletion failed: " + error.message,"Deletion failed","⚠");
+  }
+}
+
+
+/* =========================================================
+   RETURN RECORD TRASH
+========================================================= */
+
+async function moveReturnToTrash(returnId, issueId) {
+  const confirmed = await atlConfirm(
+    "Delete this return record? The returned quantity will be reversed and removed from available stock. The record can be restored from Return Trash.",
+    "Move return to Trash",
+    true
+  );
+  if (!confirmed) return;
+
+  try {
+    const {data,error} = await db.rpc("atl_delete_component_return", {
+      p_return_id: returnId
+    });
+    if (error) throw error;
+    if (data !== true) throw new Error("The return record was not deleted.");
+
+    await logActivity("MOVE COMPONENT RETURN TO TRASH", returnId);
+    showToast("Return record moved to Trash. Stock and issue balances were updated.");
+
+    await loadIssueData(false);
+    const updatedIssue = issueCache.find(item => item.id === issueId);
+    if (updatedIssue && $("issueHistoryModal")) {
+      await showIssueHistory(updatedIssue);
+    }
+    if ($("issuesTable")) drawIssueRows(issueCache);
+  } catch (error) {
+    await atlAlert("Could not move return to Trash: " + error.message, "Delete failed", "⚠");
+  }
+}
+
+async function renderReturnTrash() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Return Records Trash</h1>
+        <p>Restore deleted component return records or permanently delete them.</p>
+      </div>
+      <button class="btn btn-outline" id="backToReturnIssues">← Back to Issues</button>
+    </div>
+    <div class="panel">
+      <div class="notice">Restoring a return adds its quantity back to available stock and updates the original issue record. Only Admin can permanently delete records.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Return Date</th><th>Component</th><th>Person</th><th>Quantity</th><th>Deleted At</th><th>Actions</th></tr></thead>
+          <tbody id="returnTrashTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  $("backToReturnIssues").onclick = renderIssues;
+
+  try {
+    const [returns, issues, components] = await Promise.all([
+      fetchAllRows("component_returns", "*", q => q.eq("deleted", true).order("deleted_at", {ascending:false})),
+      fetchAllRows("component_issues", "*", q => q.order("issue_date", {ascending:false})),
+      fetchAllRows("components", "*", q => q.order("name"))
+    ]);
+
+    if (!returns.length) {
+      $("returnTrashTable").innerHTML = `<tr><td colspan="6" class="empty">Return Records Trash is empty.</td></tr>`;
+      return;
+    }
+
+    const issueMap = new Map(issues.map(row => [String(row.id), row]));
+    const componentMap = new Map(components.map(row => [String(row.id), row]));
+
+    $("returnTrashTable").innerHTML = returns.map(record => {
+      const issue = issueMap.get(String(record.issue_id));
+      const component = issue ? componentMap.get(String(issue.component_id)) : null;
+      return `
+        <tr>
+          <td>${escapeHTML(formatDate(record.return_date))}</td>
+          <td><strong>${escapeHTML(component?.name || "Component not found")}</strong></td>
+          <td>${escapeHTML(issue?.person_name || "Issue record not found")}</td>
+          <td>${Number(record.quantity || 0)}</td>
+          <td>${escapeHTML(formatDate(record.deleted_at))}</td>
+          <td><div class="actions">
+            <button class="btn btn-success" data-return-restore="${record.id}">Restore</button>
+            ${isAdmin() ? `<button class="btn btn-danger" data-return-permanent="${record.id}">Delete Forever</button>` : ""}
+          </div></td>
+        </tr>
+      `;
+    }).join("");
+
+    $("returnTrashTable").querySelectorAll("[data-return-restore]").forEach(button => {
+      button.onclick = () => restoreReturn(button.dataset.returnRestore);
+    });
+    $("returnTrashTable").querySelectorAll("[data-return-permanent]").forEach(button => {
+      button.onclick = () => permanentlyDeleteReturn(button.dataset.returnPermanent);
+    });
+  } catch (error) {
+    $("returnTrashTable").innerHTML = `<tr><td colspan="6" class="empty">Could not load Return Trash: ${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+async function restoreReturn(returnId) {
+  const confirmed = await atlConfirm(
+    "Restore this return record? Its quantity will be added back to available stock.",
+    "Restore return"
+  );
+  if (!confirmed) return;
+
+  try {
+    const {data,error} = await db.rpc("atl_restore_component_return", {
+      p_return_id: returnId
+    });
+    if (error) throw error;
+    if (data !== true) throw new Error("The return record could not be restored.");
+
+    await logActivity("RESTORE COMPONENT RETURN", returnId);
+    showToast("Return record restored and stock updated.");
+    await renderReturnTrash();
+  } catch (error) {
+    await atlAlert("Could not restore return record: " + error.message, "Restore failed", "⚠");
+  }
+}
+
+async function permanentlyDeleteReturn(returnId) {
+  if (!isAdmin()) {
+    await atlAlert("Only Admin can permanently delete return records.", "Access denied", "🔒");
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    "Permanently delete this return record? This cannot be undone. Stock has already been reversed when it was moved to Trash.",
+    "Permanent return deletion",
+    true
+  );
+  if (!confirmed) return;
+
+  try {
+    const {data,error} = await db.rpc("atl_permanently_delete_component_return", {
+      p_return_id: returnId
+    });
+    if (error) throw error;
+    if (data !== true) throw new Error("The return record was not found in Trash.");
+
+    await logActivity("PERMANENTLY DELETE COMPONENT RETURN", returnId);
+    showToast("Return record permanently deleted.");
+    await renderReturnTrash();
+  } catch (error) {
+    await atlAlert("Could not permanently delete return record: " + error.message, "Deletion failed", "⚠");
   }
 }
 
