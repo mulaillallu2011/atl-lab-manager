@@ -1,0 +1,3553 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="description" content="ATL Lab Manager - manage students, projects, components and 3D printing jobs.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<title>ATL Lab Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root {
+  --bg:#f4f6fb;
+  --card:#fff;
+  --text:#172033;
+  --muted:#718096;
+  --primary:#4f46e5;
+  --primary2:#4338ca;
+  --border:#e5e9f2;
+  --danger:#dc2626;
+  --green:#059669;
+  --sidebar:#111827;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#111827,#312e81)}
+.login-card{width:100%;max-width:420px;background:white;padding:34px;border-radius:20px;box-shadow:0 20px 60px #0004}
+.logo{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:#4f46e5;color:white;font-size:23px;font-weight:800}
+.login-card h1{margin:16px 0 5px}
+.login-card p{color:#718096}
+
+.field{margin:14px 0}
+.field label{display:block;font-size:13px;font-weight:650;margin-bottom:7px}
+.field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;background:white;outline:none;color:#172033}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px #4f46e51a}
+.field input:disabled{background:#f3f4f6;color:#64748b}
+
+.btn{border:0;border-radius:9px;padding:10px 15px;font-weight:650;background:#eef0f7;color:#263047}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn-primary{background:var(--primary);color:white}
+.btn-primary:hover{background:var(--primary2)}
+.btn-danger{background:#fee2e2;color:#b91c1c}
+.btn-success{background:#d1fae5;color:#047857}
+.btn-outline{background:white;border:1px solid var(--border)}
+.btn-block{width:100%}
+.error{color:#dc2626;font-size:13px;margin-top:10px}
+.success{color:#059669;font-size:13px;margin-top:10px}
+
+.app{min-height:100vh;display:flex}
+.sidebar{width:245px;background:var(--sidebar);color:white;padding:22px 15px;display:flex;flex-direction:column;flex-shrink:0}
+.brand{display:flex;gap:12px;align-items:center;padding:0 8px 25px}
+.brand-icon{width:40px;height:40px;border-radius:12px;background:#4f46e5;display:grid;place-items:center;font-weight:800;font-size:18px}
+.brand strong{display:block}
+.brand small{color:#9ca3af}
+.nav-label{color:#9ca3af;font-size:10px;letter-spacing:1.3px;padding:15px 10px 8px}
+.nav-btn{width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;margin:2px 0;border:0;border-radius:9px;color:#cbd5e1;background:transparent;text-align:left;font-size:14px}
+.nav-btn:hover,.nav-btn.active{background:#312e81;color:white}
+.nav-icon{width:20px;text-align:center}
+.sidebar-bottom{margin-top:auto;padding-top:20px}
+.main{flex:1;min-width:0}
+.topbar{height:70px;background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.role-pill{background:#eef2ff;color:#4338ca;border-radius:30px;padding:6px 11px;font-size:12px;font-weight:700}
+.content{padding:28px;max-width:1400px;margin:auto}
+.page-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px;flex-wrap:wrap}
+.page-heading h1{margin:0 0 5px;font-size:25px}
+.page-heading p{margin:0;color:var(--muted);font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:22px}
+.stat-card,.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:19px}
+.stat-title{font-size:13px;color:var(--muted)}
+.stat-number{font-size:29px;font-weight:800;margin-top:10px}
+.stat-icon{width:37px;height:37px;border-radius:10px;background:#eef2ff;display:grid;place-items:center}
+.stat-top{display:flex;justify-content:space-between;align-items:center}
+.panel{margin-bottom:18px}
+.panel h3{margin:0 0 15px;font-size:16px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+.search{flex:1;min-width:180px}
+.search input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:9px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{padding:13px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+th{color:var(--muted);font-weight:650;background:#fafbfe}
+td{vertical-align:middle}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.actions .btn{padding:7px 9px;font-size:12px}
+.tag{display:inline-block;padding:4px 8px;border-radius:20px;background:#eef2ff;color:#4338ca;font-size:11px;font-weight:650}
+.empty{padding:35px;text-align:center;color:var(--muted)}
+
+.stock-good{background:#d1fae5;color:#047857}
+.stock-low{background:#fef3c7;color:#92400e}
+.stock-out{background:#fee2e2;color:#b91c1c}
+.status-issued{background:#dbeafe;color:#1d4ed8}
+.status-partial{background:#fef3c7;color:#92400e}
+.status-returned{background:#d1fae5;color:#047857}
+
+.modal-backdrop{position:fixed;inset:0;background:#11182788;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal{width:100%;max-width:600px;max-height:90vh;overflow:auto;background:white;border-radius:16px;padding:23px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-head h2{margin:0;font-size:20px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.notice{padding:12px 14px;border-radius:9px;background:#eff6ff;color:#1d4ed8;font-size:13px;margin-bottom:15px}
+.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:white;padding:13px 18px;border-radius:10px;z-index:130;box-shadow:0 5px 20px #0003}
+.mobile-menu{display:none}
+
+.dialog-backdrop{position:fixed;inset:0;z-index:100;background:rgba(15,23,42,.65);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
+.dialog-box{width:100%;max-width:430px;background:white;border-radius:18px;padding:25px;box-shadow:0 25px 70px #0004;animation:dialogAppear .2s ease}
+@keyframes dialogAppear{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.dialog-icon{width:45px;height:45px;display:grid;place-items:center;border-radius:13px;background:#eef2ff;color:#4f46e5;font-size:22px;margin-bottom:15px}
+.dialog-box h2{margin:0 0 9px;font-size:20px}
+.dialog-box p{color:#718096;font-size:14px;line-height:1.6;white-space:pre-line}
+.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+
+.csv-file{padding:20px;border:2px dashed #c7d2fe;background:#f8faff;border-radius:12px;text-align:center}
+#csvDropZone{border:2px dashed #a5b4fc;background:#f8faff;border-radius:14px;padding:28px;text-align:center;transition:.2s}
+#csvDropZone.dragover{background:#eef2ff;border-color:#4f46e5;transform:scale(1.01)}
+#csvSelectedName{margin:14px 0;font-weight:700;color:#4338ca;overflow-wrap:anywhere}
+#chooseCsvButton{margin-top:10px}
+#csvFile{display:none}
+.csv-preview{max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:10px;margin-top:15px}
+.csv-preview table{min-width:850px}
+.csv-preview th,.csv-preview td{padding:9px;font-size:12px}
+.csv-status{margin-top:12px;font-size:13px;white-space:pre-line;line-height:1.6}
+.csv-good{color:#047857}
+.csv-bad{color:#b91c1c}
+
+.project-status{display:inline-block;padding:5px 9px;border-radius:20px;font-size:11px;font-weight:700;background:#eef2ff;color:#4338ca}
+.status-completed{background:#d1fae5;color:#047857}
+.status-on-hold{background:#fef3c7;color:#92400e}
+.status-cancelled{background:#fee2e2;color:#b91c1c}
+.project-description{white-space:pre-wrap;overflow-wrap:anywhere}
+/* COMPONENTS AND ISSUE / RETURN */
+.stock-low{background:#fee2e2;color:#b91c1c}
+.stock-good{background:#d1fae5;color:#047857}
+.stock-out{background:#fef3c7;color:#92400e}
+.module-form{background:#f8faff;border:1px solid var(--border);padding:17px;border-radius:12px;margin-bottom:18px}
+.module-form h3{margin:0 0 10px}
+.module-form .form-grid{gap:0 14px}
+.return-box{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.return-box input{width:85px;padding:7px;border:1px solid var(--border);border-radius:7px}
+@media(max-width:950px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+  .sidebar{position:fixed;z-index:20;left:-260px;top:0;bottom:0;transition:left .2s}
+  .sidebar.open{left:0}
+  .mobile-menu{display:inline-block}
+  .topbar{padding:0 14px}
+  .content{padding:18px 13px}
+  .cards{gap:10px}
+  .stat-card{padding:14px}
+  .stat-number{font-size:24px}
+  .form-grid{grid-template-columns:1fr}
+}
+
+/* ATL LAB RESPONSIVE UI REFRESH */
+:root{--bg:#f5f7fc;--card:#fff;--text:#172033;--muted:#667085;--primary:#4f46e5;--primary2:#3730a3;--border:#e6eaf2;--sidebar:#101827;--shadow:0 12px 32px rgba(16,24,40,.06)}
+body{background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
+.sidebar{min-height:100dvh;position:sticky;top:0;height:100dvh;overflow-y:auto;box-shadow:8px 0 28px rgba(15,23,42,.08)}
+.brand-icon{background:linear-gradient(135deg,#6366f1,#4338ca);box-shadow:0 8px 20px #4f46e544}
+.nav-btn{min-height:42px;transition:background .15s ease,color .15s ease}
+.nav-btn.active{background:linear-gradient(90deg,#4338ca,#3730a3);box-shadow:inset 3px 0 #a5b4fc}
+.topbar{position:sticky;top:0;z-index:8;box-shadow:0 3px 14px rgba(15,23,42,.035);padding-top:env(safe-area-inset-top)}
+.content{width:100%;padding:30px clamp(14px,3vw,36px)}
+.stat-card,.panel{border-radius:17px;box-shadow:var(--shadow);border-color:#e9edf5}
+.stat-card{transition:transform .18s ease,box-shadow .18s ease}.stat-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(16,24,40,.09)}
+.page-heading h1{letter-spacing:-.035em}.page-heading p{line-height:1.55}
+input,select,textarea{max-width:100%}input:focus,select:focus,textarea:focus{outline:none;border-color:#818cf8!important;box-shadow:0 0 0 3px #6366f11c}
+.table-wrap{border:1px solid var(--border);border-radius:12px}tbody tr:hover{background:#f8faff}
+.modal{box-shadow:0 24px 70px rgba(15,23,42,.22)}
+.printing-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.printing-stat{background:#f8faff;border:1px solid var(--border);padding:14px;border-radius:13px}.printing-stat strong{display:block;font-size:23px;margin-top:4px}
+.printing-form{background:#f8faff;border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0}
+.printing-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 14px}
+.printing-form .field{min-width:0}.printing-form input,.printing-form select,.printing-form textarea{width:100%;min-width:0;padding:10px;border:1px solid var(--border);border-radius:9px}
+@media(max-width:900px){.sidebar{position:fixed;left:-270px;top:0;bottom:0;height:100dvh;z-index:30;width:255px;transition:left .22s ease}.sidebar.open{left:0}.main{width:100%;min-width:0}.mobile-menu{display:inline-block}.printing-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.topbar{height:60px;padding-left:12px;padding-right:12px}.topbar-right{gap:8px}#userLabel{display:none}.content{padding:16px 11px}.page-heading{align-items:flex-start}.page-heading h1{font-size:22px}.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stat-card{padding:12px}.stat-number{font-size:22px}.panel{padding:13px;border-radius:13px}.toolbar{align-items:stretch}.form-grid,.printing-form-grid{grid-template-columns:1fr}.printing-summary{grid-template-columns:1fr 1fr}.modal{padding:16px;max-height:94dvh}.modal-actions{flex-wrap:wrap}.modal-actions .btn{flex:1}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<section id="loginPage" class="login-page">
+  <div class="login-card">
+    <div class="logo">ATL</div>
+    <h1>ATL Lab Manager</h1>
+    <p>Sign in to manage your innovation lab.</p>
+    <form id="loginForm">
+      <div class="field">
+        <label>Email address</label>
+        <input id="loginEmail" type="email" required placeholder="Enter your Supabase email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="loginPassword" type="password" required placeholder="Enter your password">
+      </div>
+      <button class="btn btn-primary btn-block" id="loginButton">Sign in</button>
+      <div id="loginError" class="error"></div>
+    </form>
+    <p class="small">ATL Lab Manager · Secure access</p>
+  </div>
+</section>
+
+<!-- MAIN APP -->
+<div id="appPage" class="app hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-icon">A</div>
+      <div><strong>ATL LAB</strong><small>Management System</small></div>
+    </div>
+
+    <div class="nav-label">WORKSPACE</div>
+    <button class="nav-btn active" data-page="Dashboard"><span class="nav-icon">▦</span> Dashboard</button>
+    <button class="nav-btn" data-page="Students"><span class="nav-icon">♙</span> Students</button>
+    <button class="nav-btn" data-page="Projects"><span class="nav-icon">◈</span> Projects</button>
+    <button class="nav-btn" data-page="Components"><span class="nav-icon">▣</span> Components</button>
+    <button class="nav-btn" data-page="Issue / Return"><span class="nav-icon">⇄</span> Issue / Return</button>
+
+    <div class="nav-label">OPERATIONS</div>
+    <button class="nav-btn" data-page="3D Printing"><span class="nav-icon">▤</span> 3D Printing</button>
+    <button class="nav-btn" data-page="Payments"><span class="nav-icon">₹</span> Payments</button>
+    <button class="nav-btn" data-page="Reports"><span class="nav-icon">▥</span> Reports</button>
+
+    <div class="nav-label">SYSTEM</div>
+    <button class="nav-btn" data-page="Trash"><span class="nav-icon">▤</span> Trash</button>
+    <button class="nav-btn" data-page="Settings" id="settingsNav"><span class="nav-icon">⚙</span> Settings</button>
+
+    <div class="sidebar-bottom">
+      <button class="nav-btn" id="logoutButton"><span class="nav-icon">↪</span> Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-right">
+        <button class="btn btn-outline mobile-menu" id="mobileMenu">☰</button>
+        <strong id="topTitle">Dashboard</strong>
+      </div>
+      <div class="topbar-right">
+        <span class="role-pill" id="roleLabel">User</span>
+        <span id="userLabel" class="small muted"></span>
+      </div>
+    </header>
+    <div class="content" id="pageContent"></div>
+  </main>
+</div>
+
+<!-- STUDENT MODAL -->
+<div id="studentModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Add Student</h2>
+      <button class="btn btn-outline" id="closeModal">✕</button>
+    </div>
+    <div class="notice">Student ID must be unique. Use a new ID for every student.</div>
+    <form id="studentForm">
+      <div class="form-grid">
+        <div class="field"><label>Student ID *</label><input id="studentId" required placeholder="e.g. ATL-001"></div>
+        <div class="field"><label>Student Name *</label><input id="studentName" required placeholder="Full name"></div>
+        <div class="field"><label>Class</label><input id="studentClass" placeholder="e.g. Class 6"></div>
+        <div class="field"><label>Student Phone</label><input id="studentPhone" placeholder="Phone number"></div>
+        <div class="field"><label>Parent Phone</label><input id="parentPhone" placeholder="Parent phone"></div>
+        <div class="field"><label>Email</label><input id="studentEmail" type="email" placeholder="Email address"></div>
+        <div class="field" style="grid-column:1/-1"><label>Interests</label><textarea id="studentInterests" rows="3" placeholder="Robotics, Arduino, AI..."></textarea></div>
+        <div class="field"><label>Record Date</label><input id="studentDate" type="date"></div>
+      </div>
+      <div id="studentFormError" class="error"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="cancelModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveStudentButton">Save Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- STUDENT DETAILS -->
+<div id="viewModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Student Details</h2>
+      <button class="btn btn-outline" id="closeView">✕</button>
+    </div>
+    <div id="studentDetails"></div>
+  </div>
+</div>
+
+<!-- CSV MODAL -->
+<div id="csvModal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:950px">
+    <div class="modal-head">
+      <h2>Import Students from CSV</h2>
+      <button class="btn btn-outline" id="closeCsvModal">✕</button>
+    </div>
+    <div class="notice">Required columns: Student ID and Student Name. Optional: Class, Student Phone, Parent Phone, Email, Interests, Record Date.</div>
+    <div class="csv-file" id="csvDropZone">
+      <div style="font-size:35px">📄</div>
+      <h3>Upload your student CSV</h3>
+      <p class="small muted">Choose a CSV file or drag it into this area.</p>
+      <input type="file" id="csvFile" accept=".csv,text/csv" hidden>
+      <button type="button" class="btn btn-primary" id="chooseCsvButton">Choose CSV File</button>
+      <p id="csvSelectedName" class="small muted">No file selected</p>
+      <button type="button" class="btn btn-outline" id="downloadCsvTemplate">Download CSV Template</button>
+    </div>
+    <div id="csvStatus" class="csv-status muted">No file selected.</div>
+    <div id="csvPreview" class="csv-preview hidden">
+      <table><thead id="csvPreviewHead"></thead><tbody id="csvPreviewBody"></tbody></table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelCsv">Cancel</button>
+      <button class="btn btn-primary" id="importCsvButton" disabled>Import Students</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div id="projectModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="projectModalTitle">Add Project</h2>
+      <button class="btn btn-outline" id="closeProjectModal">✕</button>
+    </div>
+    <div class="notice">Enter project information below. You can edit these details later.</div>
+    <form id="projectForm">
+      <div class="form-grid">
+        <div class="field" style="grid-column:1/-1">
+          <label>Project Name *</label>
+          <input id="projectName" required maxlength="150" placeholder="e.g. Smart Irrigation System">
+        </div>
+        <div class="field">
+          <label>Assign Student</label>
+          <select id="projectStudent"><option value="">Not assigned</option></select>
+        </div>
+        <div class="field">
+          <label>Mentor</label>
+          <input id="projectMentor" placeholder="Mentor name">
+        </div>
+        <div class="field">
+          <label>Start Date</label>
+          <input id="projectStartDate" type="date">
+        </div>
+        <div class="field">
+          <label>Target Date</label>
+          <input id="projectTargetDate" type="date">
+        </div>
+        <div class="field">
+          <label>Budget</label>
+          <input id="projectBudget" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="projectStatus">
+            <option>Planning</option>
+            <option>In Progress</option>
+            <option>On Hold</option>
+            <option>Completed</option>
+            <option>Cancelled</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label>Description</label>
+          <textarea id="projectDescription" rows="4" placeholder="Describe the project..."></textarea>
+        </div>
+      </div>
+      <div id="projectFormError" class="error"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="cancelProjectModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveProjectButton">Save Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PROJECT DETAILS -->
+<div id="projectViewModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Project Details</h2>
+      <button class="btn btn-outline" id="closeProjectView">✕</button>
+    </div>
+    <div id="projectDetails"></div>
+  </div>
+</div>
+
+<!-- COMPONENT MODAL -->
+<div id="componentModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="componentModalTitle">Add Component</h2>
+      <button class="btn btn-outline" id="closeComponentModal">✕</button>
+    </div>
+    <div class="notice">
+      Add the component name, optional code and opening quantity. Stock adjustments will be added in a later version.
+    </div>
+    <form id="componentForm">
+      <div class="field">
+        <label>Component Name *</label>
+        <input id="componentName" required maxlength="150" placeholder="e.g. Red LED">
+      </div>
+      <div class="field">
+        <label>Component Code / SKU</label>
+        <input id="componentCode" maxlength="80" placeholder="e.g. LED-RED-001">
+      </div>
+      <div class="field">
+        <label id="componentTotalLabel">Opening Quantity *</label>
+        <input id="componentTotalQuantity" type="number" min="0" step="1" value="0" required>
+      </div>
+      <div class="field">
+        <label>Low Stock Warning Level</label>
+        <input id="componentMinimumStock" type="number" min="0" step="1" value="0">
+      </div>
+      <div id="componentFormError" class="error"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="cancelComponentModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveComponentButton">Save Component</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ISSUE MODAL -->
+<div id="issueModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Record Component Issue</h2>
+      <button type="button" class="btn btn-outline" id="closeIssueModal">✕</button>
+    </div>
+    <div class="notice">Record which ATL student took a component and when. This register does not deduct stock.</div>
+    <form id="issueForm">
+      <div class="field">
+        <label>Component *</label>
+        <select id="issueComponent" required><option value="">Loading components...</option></select>
+      </div>
+      <div class="field">
+        <label>ATL Student *</label>
+        <select id="issueStudent" required><option value="">Loading students...</option></select>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Quantity Taken *</label>
+          <input id="issueQuantity" type="number" min="1" step="1" required value="1">
+        </div>
+        <div class="field">
+          <label>Date Taken *</label>
+          <input id="issueDate" type="date" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="issueNotes" rows="3" placeholder="Optional notes..."></textarea>
+      </div>
+      <div id="issueFormError" class="error"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="cancelIssueModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveIssueButton">Save Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- RETURN MODAL -->
+<div id="returnModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Record Component Return</h2>
+      <button class="btn btn-outline" id="closeReturnModal">✕</button>
+    </div>
+    <div id="returnIssueInfo" class="notice"></div>
+    <form id="returnForm">
+      <div class="field">
+        <label>Quantity Being Returned *</label>
+        <input id="returnQuantity" type="number" min="1" step="1" required>
+      </div>
+      <div class="field">
+        <label>Return Date *</label>
+        <input id="returnDate" type="date" required>
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="returnNotes" rows="3" placeholder="Optional return notes..."></textarea>
+      </div>
+      <div id="returnFormError" class="error"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="cancelReturnModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveReturnButton">Save Return</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- RETURN HISTORY MODAL -->
+<div id="issueHistoryModal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:750px">
+    <div class="modal-head">
+      <h2>Return History</h2>
+      <button class="btn btn-outline" id="closeIssueHistoryModal">✕</button>
+    </div>
+    <div id="issueHistoryInfo" class="notice"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Return Date</th><th>Quantity Returned</th><th>Notes</th></tr>
+        </thead>
+        <tbody id="issueHistoryTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRMATION DIALOG -->
+<div id="dialogModal" class="dialog-backdrop hidden">
+  <div class="dialog-box">
+    <div class="dialog-icon" id="dialogIcon">!</div>
+    <h2 id="dialogTitle">Confirm action</h2>
+    <p id="dialogMessage"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-outline hidden" id="dialogCancel">Cancel</button>
+      <button class="btn btn-primary" id="dialogConfirm">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* =========================================================
+   SUPABASE CONFIGURATION
+========================================================= */
+
+const SUPABASE_URL = "https://iozcclqisrzwnvbxrerl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_TX1cV4RlRy6tTyDKm1LtyQ_AGK8nXuC";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+let currentPage = "Dashboard";
+
+let editingStudentId = null;
+let studentCache = [];
+
+let csvRows = [];
+let csvValidRows = [];
+let csvInvalidRows = [];
+
+let projectCache = [];
+let projectStudents = [];
+let editingProjectId = null;
+
+let componentCache = [];
+let printingJobsCache = [];
+let editingComponentId = null;
+let selectedStockComponentId = null;
+
+let issueCache = [];
+let issueComponentCache = [];
+let issueStudentCache = [];
+let selectedReturnIssue = null;
+
+let toastTimer = null;
+
+const $ = id => document.getElementById(id);
+
+
+/* =========================================================
+   COMMON HELPERS
+========================================================= */
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#039;"
+  })[char]);
+}
+
+function isAdmin() {
+  return String(currentProfile?.role || "").toLowerCase() === "admin";
+}
+
+function todayLocal() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2,"0");
+  const day = String(date.getDate()).padStart(2,"0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const text = String(value);
+  const date = text.includes("T") ? new Date(text) : new Date(text + "T00:00:00");
+  if (Number.isNaN(date.getTime())) return text;
+  return date.toLocaleDateString();
+}
+
+function showToast(message) {
+  $("toast").textContent = message;
+  $("toast").classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.add("hidden"),3500);
+}
+
+function showLoginError(message) {
+  $("loginError").textContent = message;
+}
+
+
+/* =========================================================
+   CUSTOM CONFIRMATION POPUPS
+========================================================= */
+
+function showDialog({
+  title="ATL Lab Manager",
+  message="",
+  icon="!",
+  confirmText="Continue",
+  cancelText="Cancel",
+  showCancel=false,
+  danger=false
+}={}) {
+  return new Promise(resolve => {
+    $("dialogTitle").textContent = title;
+    $("dialogMessage").textContent = message;
+    $("dialogIcon").textContent = icon;
+    $("dialogConfirm").textContent = confirmText;
+    $("dialogCancel").textContent = cancelText;
+    $("dialogConfirm").className = danger ? "btn btn-danger" : "btn btn-primary";
+    $("dialogCancel").classList.toggle("hidden",!showCancel);
+    $("dialogModal").classList.remove("hidden");
+
+    let finished = false;
+
+    function finish(result) {
+      if (finished) return;
+      finished = true;
+      $("dialogModal").classList.add("hidden");
+      $("dialogConfirm").removeEventListener("click",yes);
+      $("dialogCancel").removeEventListener("click",no);
+      $("dialogModal").removeEventListener("click",outside);
+      document.removeEventListener("keydown",escape);
+      resolve(result);
+    }
+
+    function yes(){finish(true)}
+    function no(){finish(false)}
+    function outside(event){if(event.target === $("dialogModal")) finish(false)}
+    function escape(event){if(event.key === "Escape") finish(false)}
+
+    $("dialogConfirm").addEventListener("click",yes);
+    $("dialogCancel").addEventListener("click",no);
+    $("dialogModal").addEventListener("click",outside);
+    document.addEventListener("keydown",escape);
+  });
+}
+
+async function atlConfirm(message,title="Please confirm",danger=false) {
+  return showDialog({
+    title,
+    message,
+    icon:danger ? "⚠" : "?",
+    confirmText:danger ? "Yes, continue" : "Continue",
+    showCancel:true,
+    danger
+  });
+}
+
+function atlAlert(message,title="ATL Lab Manager",icon="ℹ") {
+  return showDialog({
+    title,
+    message,
+    icon,
+    confirmText:"OK",
+    showCancel:false
+  });
+}
+
+
+/* =========================================================
+   AUTHENTICATION
+========================================================= */
+
+
+async function loadProfile(user) {
+  const { data, error } = await db
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!data) {
+    throw new Error("Your profile was not found. Contact the Admin.");
+  }
+
+  if (!data.active) {
+    throw new Error("Your account is inactive. Contact the Admin.");
+  }
+
+  currentUser = user;
+  currentProfile = data;
+
+  $("loginPage").classList.add("hidden");
+  $("appPage").classList.remove("hidden");
+
+  $("roleLabel").textContent = data.role || "User";
+  $("userLabel").textContent = data.username || user.email;
+
+  $("settingsNav").classList.toggle("hidden", !isAdmin());
+
+  await navigate("Dashboard");
+}
+
+
+
+async function signIn(event) {
+  event.preventDefault();
+
+  $("loginButton").disabled = true;
+  $("loginButton").textContent = "Signing in...";
+  showLoginError("");
+
+  try {
+    const email = $("loginEmail").value.trim();
+    const password = $("loginPassword").value;
+
+    if (!email || !password) {
+      throw new Error("Please enter your email and password.");
+    }
+
+    // Actual Supabase login request
+    const { data, error } = await db.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+    if (error) throw error;
+
+    if (!data.user) {
+      throw new Error("Login failed. User not found.");
+    }
+
+    // Load Admin or Operator profile
+    await loadProfile(data.user);
+
+  } catch (error) {
+    console.error("Login error:", error);
+    await db.auth.signOut();
+    showLoginError(error.message || "Login failed.");
+  } finally {
+    $("loginButton").disabled = false;
+    $("loginButton").textContent = "Sign in";
+  }
+}
+
+
+async function signOut() {
+  const confirmed = await atlConfirm(
+    "Are you sure you want to sign out?",
+    "Sign out"
+  );
+
+  if (!confirmed) return;
+
+  await db.auth.signOut();
+
+  currentUser = null;
+  currentProfile = null;
+
+  $("appPage").classList.add("hidden");
+  $("loginPage").classList.remove("hidden");
+  $("loginPassword").value = "";
+}
+
+async function restoreSession() {
+  try {
+    const {data,error} = await db.auth.getSession();
+    if (error) throw error;
+
+    if (data.session?.user) {
+      await loadProfile(data.session.user);
+    }
+  } catch (error) {
+    console.error("Session restore:",error);
+    await db.auth.signOut();
+  }
+}
+
+
+/* =========================================================
+   ACTIVITY LOG
+========================================================= */
+
+async function logActivity(action,details) {
+  if (!currentUser || !currentProfile) return;
+
+  const {error} = await db.from("activity_logs").insert({
+    user_id:currentUser.id,
+    username:currentProfile.username,
+    role:currentProfile.role,
+    action,
+    details
+  });
+
+  if (error) {
+    console.warn("Activity log could not be saved:",error.message);
+  }
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+async function navigate(page) {
+  if (page === "Settings" && !isAdmin()) {
+    await atlAlert("Only Admin can access Settings.","Access denied","🔒");
+    return;
+  }
+
+  currentPage = page;
+
+  document.querySelectorAll(".nav-btn[data-page]").forEach(button => {
+    button.classList.toggle("active",button.dataset.page === page);
+  });
+
+  $("topTitle").textContent = page;
+  $("sidebar").classList.remove("open");
+
+  if (page === "Dashboard") {
+    await renderDashboard();
+  } else if (page === "Students") {
+    await renderStudents();
+  } else if (page === "Projects") {
+    await renderProjects();
+  } else if (page === "Components") {
+    await renderComponents();
+  } else if (page === "Issue / Return") {
+    await renderIssueReturn();
+  } else if (page === "Trash") {
+    await renderTrash();
+  } else if (page === "3D Printing") {
+    await renderPrintingJobs();
+  } else {
+    renderComingSoon(page);
+  }
+}
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+async function getCount(table,activeOnly=false) {
+  let query = db.from(table).select("*",{count:"exact",head:true});
+
+  if (activeOnly) {
+    query = query.eq("deleted",false);
+  }
+
+  const {count,error} = await query;
+
+  if (error) throw error;
+  return count || 0;
+}
+
+async function renderDashboard() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Welcome to your ATL Lab Management System.</p>
+      </div>
+      <button class="btn btn-outline" id="refreshDashboard">↻ Refresh</button>
+    </div>
+
+    <div id="dashboardMessage" class="notice">
+      Loading live database information...
+    </div>
+
+    <div class="cards" id="dashboardCards"></div>
+
+    <div class="panel">
+      <h3>System status</h3>
+      <p class="muted small">
+        Signed in as ${escapeHTML(currentProfile?.username || currentUser?.email || "User")}
+        · ${escapeHTML(currentProfile?.role || "User")}
+      </p>
+      <p class="success">● Supabase authentication connected</p>
+      <p class="success">● User profile loaded</p>
+      <p class="success">● Dashboard data is read from your database</p>
+    </div>
+  `;
+
+  $("refreshDashboard").onclick = renderDashboard;
+
+  const tables = [
+    ["Students","students","♙",true],
+    ["Projects","projects","◈",true],
+    ["Components","components","▣",true],
+    ["Stock Movements","stock_movements","⇄",false],
+    ["3D Printing Orders","print_orders","▤",false],
+    ["Payments","payments","₹",false]
+  ];
+
+  try {
+    const results = await Promise.all(
+      tables.map(item => getCount(item[1],item[3]))
+    );
+
+    $("dashboardCards").innerHTML = tables.map((item,index) => `
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-title">${item[0]}</span>
+          <span class="stat-icon">${item[2]}</span>
+        </div>
+        <div class="stat-number">${results[index]}</div>
+        <div class="small muted">${item[3] ? "Active records" : "Records"}</div>
+      </div>
+    `).join("");
+
+    $("dashboardMessage").classList.add("hidden");
+  } catch (error) {
+    $("dashboardMessage").textContent = "Database read error: " + error.message;
+    $("dashboardMessage").style.background = "#fee2e2";
+    $("dashboardMessage").style.color = "#991b1b";
+  }
+}
+
+
+/* =========================================================
+   STUDENTS
+========================================================= */
+
+async function fetchStudents(includeDeleted=false) {
+  const {data,error} = await db.from("students")
+    .select("*")
+    .eq("deleted",includeDeleted)
+    .order("created_at",{ascending:false});
+
+  if (error) throw error;
+  return data || [];
+}
+
+async function renderStudents() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Students</h1>
+        <p>Manage student information and records.</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="csvImportButton">↑ Import CSV</button>
+        <button class="btn btn-primary" id="addStudentButton">+ Add Student</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <div class="search">
+          <input id="studentSearch" placeholder="Search by ID, name, class, phone or interest...">
+        </div>
+        <button class="btn btn-outline" id="reloadStudents">↻ Refresh</button>
+        <button class="btn btn-outline" id="openTrash">View Trash</button>
+      </div>
+
+      <div class="small muted" id="studentCount">Loading students...</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th><th>Name</th><th>Class</th>
+              <th>Phone</th><th>Interests</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="studentsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("addStudentButton").onclick = () => openStudentForm();
+  $("csvImportButton").onclick = openCsvModal;
+  $("reloadStudents").onclick = renderStudents;
+  $("openTrash").onclick = () => navigate("Trash");
+  $("studentSearch").addEventListener("input",filterStudents);
+
+  try {
+    studentCache = await fetchStudents(false);
+    drawStudentRows(studentCache);
+  } catch (error) {
+    $("studentsTable").innerHTML = `
+      <tr><td colspan="6" class="empty">
+        Could not load students: ${escapeHTML(error.message)}
+      </td></tr>`;
+    $("studentCount").textContent = "Database read error";
+  }
+}
+
+function filterStudents() {
+  const term = $("studentSearch").value.toLowerCase().trim();
+
+  const filtered = studentCache.filter(student => {
+    const searchable = [
+      student.id,
+      student.name,
+      student.student_class,
+      student.phone,
+      student.parent_phone,
+      student.email,
+      student.interests
+    ].join(" ").toLowerCase();
+
+    return searchable.includes(term);
+  });
+
+  drawStudentRows(filtered);
+}
+
+function drawStudentRows(rows) {
+  $("studentCount").textContent = `${rows.length} student record(s)`;
+
+  if (!rows.length) {
+    $("studentsTable").innerHTML = `
+      <tr><td colspan="6" class="empty">
+        No students found. Click Add Student to create one.
+      </td></tr>`;
+    return;
+  }
+
+  $("studentsTable").innerHTML = rows.map(student => `
+    <tr>
+      <td><strong>${escapeHTML(student.id)}</strong></td>
+      <td>${escapeHTML(student.name)}</td>
+      <td><span class="tag">${escapeHTML(student.student_class || "—")}</span></td>
+      <td>${escapeHTML(student.phone || "—")}</td>
+      <td>${escapeHTML(student.interests || "—")}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-outline" data-action="view" data-id="${escapeHTML(student.id)}">View</button>
+          <button class="btn btn-outline" data-action="edit" data-id="${escapeHTML(student.id)}">Edit</button>
+          <button class="btn btn-danger" data-action="delete" data-id="${escapeHTML(student.id)}">Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  $("studentsTable").querySelectorAll("button[data-action]").forEach(button => {
+    button.addEventListener("click",() => {
+      const student = studentCache.find(item => item.id === button.dataset.id);
+      const action = button.dataset.action;
+
+      if (action === "view") viewStudent(student);
+      if (action === "edit") openStudentForm(student);
+      if (action === "delete") deleteStudent(student);
+    });
+  });
+}
+
+
+/* =========================================================
+   STUDENT FORM
+========================================================= */
+
+function openStudentForm(student=null) {
+  editingStudentId = student ? student.id : null;
+
+  $("studentForm").reset();
+  $("studentFormError").textContent = "";
+  $("modalTitle").textContent = student ? "Edit Student" : "Add Student";
+  $("studentId").disabled = !!student;
+
+  $("studentId").value = student?.id || "";
+  $("studentName").value = student?.name || "";
+  $("studentClass").value = student?.student_class || "";
+  $("studentPhone").value = student?.phone || "";
+  $("parentPhone").value = student?.parent_phone || "";
+  $("studentEmail").value = student?.email || "";
+  $("studentInterests").value = student?.interests || "";
+  $("studentDate").value = student?.record_date || todayLocal();
+
+  $("studentModal").classList.remove("hidden");
+}
+
+function closeStudentForm() {
+  $("studentModal").classList.add("hidden");
+  editingStudentId = null;
+}
+
+async function saveStudent(event) {
+  event.preventDefault();
+
+  const button = $("saveStudentButton");
+  const wasEditing = Boolean(editingStudentId);
+
+  button.disabled = true;
+  button.textContent = "Saving...";
+  $("studentFormError").textContent = "";
+
+  const record = {
+    id:$("studentId").value.trim(),
+    name:$("studentName").value.trim(),
+    student_class:$("studentClass").value.trim() || null,
+    phone:$("studentPhone").value.trim() || null,
+    parent_phone:$("parentPhone").value.trim() || null,
+    email:$("studentEmail").value.trim() || null,
+    interests:$("studentInterests").value.trim() || null,
+    record_date:$("studentDate").value || null
+  };
+
+  try {
+    if (!record.id || !record.name) {
+      throw new Error("Student ID and name are required.");
+    }
+
+    if (wasEditing) {
+      const {error} = await db.from("students")
+        .update(record)
+        .eq("id",editingStudentId)
+        .eq("deleted",false);
+
+      if (error) throw error;
+
+      await logActivity("UPDATE STUDENT",record.id + " - " + record.name);
+      showToast("Student updated successfully.");
+    } else {
+      const {data:existing,error:checkError} = await db.from("students")
+        .select("id")
+        .eq("id",record.id)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+      if (existing) throw new Error("This Student ID already exists. Please use another ID.");
+
+      record.deleted = false;
+
+      const {error} = await db.from("students").insert(record);
+      if (error) throw error;
+
+      await logActivity("ADD STUDENT",record.id + " - " + record.name);
+      showToast("Student added successfully.");
+    }
+
+    closeStudentForm();
+    await renderStudents();
+  } catch (error) {
+    $("studentFormError").textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save Student";
+  }
+}
+
+
+/* =========================================================
+   VIEW STUDENT
+========================================================= */
+
+function viewStudent(student) {
+  if (!student) return;
+
+  const fields = [
+    ["Student ID",student.id],
+    ["Name",student.name],
+    ["Class",student.student_class],
+    ["Phone",student.phone],
+    ["Parent Phone",student.parent_phone],
+    ["Email",student.email],
+    ["Interests",student.interests],
+    ["Record Date",formatDate(student.record_date)]
+  ];
+
+  $("studentDetails").innerHTML = fields.map(field => `
+    <div style="padding:12px 0;border-bottom:1px solid #e5e9f2">
+      <div class="small muted">${escapeHTML(field[0])}</div>
+      <strong>${escapeHTML(field[1] || "—")}</strong>
+    </div>
+  `).join("");
+
+  $("viewModal").classList.remove("hidden");
+}
+
+
+/* =========================================================
+   STUDENT SOFT DELETE AND TRASH
+========================================================= */
+
+async function deleteStudent(student) {
+  if (!student) return;
+
+  const confirmed = await atlConfirm(
+    `Move ${student.name} (${student.id}) to Trash?`,
+    "Move student to Trash",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("students")
+      .update({
+        deleted:true,
+        deleted_at:new Date().toISOString(),
+        deleted_by:currentUser.id
+      })
+      .eq("id",student.id)
+      .eq("deleted",false);
+
+    if (error) throw error;
+
+    await logActivity("MOVE STUDENT TO TRASH",student.id + " - " + student.name);
+    showToast("Student moved to Trash.");
+    await renderStudents();
+  } catch (error) {
+    await atlAlert("Could not delete student: " + error.message,"Delete failed","⚠");
+  }
+}
+
+async function renderTrash() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Trash</h1>
+        <p>Restore deleted records or permanently delete them.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Trash sections</h3>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="studentTrashTab">Students Trash</button>
+        <button class="btn btn-outline" id="projectTrashTab">Projects Trash</button>
+        <button class="btn btn-outline" id="componentTrashTab">Components Trash</button>
+        <button class="btn btn-outline" id="issueTrashTab">Issue Records Trash</button>
+      </div>
+      <div class="notice">
+        Choose a section to manage deleted records. Only Admin can permanently delete records.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Deleted Students</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th><th>Name</th><th>Class</th>
+              <th>Deleted At</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="trashTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("studentTrashTab").onclick = renderTrash;
+  $("projectTrashTab").onclick = renderProjectTrash;
+  $("componentTrashTab").onclick = renderComponentTrash;
+  $("issueTrashTab").onclick = renderIssueTrash;
+
+  try {
+    const rows = await fetchStudents(true);
+
+    if (!rows.length) {
+      $("trashTable").innerHTML = `
+        <tr><td colspan="5" class="empty">Student Trash is empty.</td></tr>`;
+      return;
+    }
+
+    $("trashTable").innerHTML = rows.map(student => `
+      <tr>
+        <td><strong>${escapeHTML(student.id)}</strong></td>
+        <td>${escapeHTML(student.name)}</td>
+        <td>${escapeHTML(student.student_class || "—")}</td>
+        <td>${escapeHTML(formatDate(student.deleted_at))}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-success" data-restore-student="${escapeHTML(student.id)}">Restore</button>
+            ${isAdmin() ? `<button class="btn btn-danger" data-permanent-student="${escapeHTML(student.id)}">Delete permanently</button>` : ""}
+          </div>
+        </td>
+      </tr>
+    `).join("");
+
+    $("trashTable").querySelectorAll("[data-restore-student]").forEach(button => {
+      button.onclick = () => restoreStudent(button.dataset.restoreStudent);
+    });
+
+    $("trashTable").querySelectorAll("[data-permanent-student]").forEach(button => {
+      button.onclick = () => permanentlyDeleteStudent(button.dataset.permanentStudent);
+    });
+  } catch (error) {
+    $("trashTable").innerHTML = `
+      <tr><td colspan="5" class="empty">Could not load Trash: ${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+async function restoreStudent(id) {
+  const confirmed = await atlConfirm("Restore this student record?","Restore student");
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("students")
+      .update({deleted:false,deleted_at:null,deleted_by:null})
+      .eq("id",id)
+      .eq("deleted",true);
+
+    if (error) throw error;
+
+    await logActivity("RESTORE STUDENT",id);
+    showToast("Student restored.");
+    await renderTrash();
+  } catch (error) {
+    await atlAlert("Restore failed: " + error.message,"Restore failed","⚠");
+  }
+}
+
+async function permanentlyDeleteStudent(id) {
+  if (!isAdmin()) {
+    await atlAlert("Only Admin can permanently delete records.","Access denied","🔒");
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    "Permanently delete " + id + "? This action cannot be undone.",
+    "Permanent deletion",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("students")
+      .delete()
+      .eq("id",id)
+      .eq("deleted",true);
+
+    if (error) throw error;
+
+    await logActivity("PERMANENTLY DELETE STUDENT",id);
+    showToast("Student permanently deleted.");
+    await renderTrash();
+  } catch (error) {
+    await atlAlert("Permanent deletion failed: " + error.message,"Deletion failed","⚠");
+  }
+}
+
+
+/* =========================================================
+   PROJECTS MODULE
+========================================================= */
+
+const PROJECT_STATUSES = [
+  "Planning",
+  "In Progress",
+  "On Hold",
+  "Completed",
+  "Cancelled"
+];
+
+async function renderProjects() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Projects</h1>
+        <p>Manage ATL projects, students, mentors and progress.</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="projectTrashButton">🗑 View Trash</button>
+        <button class="btn btn-primary" id="addProjectButton">＋ Add Project</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <div class="search">
+          <input id="projectSearch" placeholder="Search by project, student, mentor or status...">
+        </div>
+        <button class="btn btn-outline" id="refreshProjects">↻ Refresh</button>
+      </div>
+      <div class="small muted" id="projectCount">Loading projects...</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th><th>Student</th><th>Mentor</th>
+              <th>Status</th><th>Target Date</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="projectsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("addProjectButton").onclick = () => openProjectForm();
+  $("projectTrashButton").onclick = renderProjectTrash;
+  $("refreshProjects").onclick = renderProjects;
+  $("projectSearch").addEventListener("input",filterProjects);
+
+  await loadProjects(false);
+}
+
+async function loadProjects(includeDeleted=false) {
+  $("projectCount").textContent = "Loading projects...";
+  $("projectsTable").innerHTML = `<tr><td colspan="6" class="empty">Loading...</td></tr>`;
+
+  try {
+    const [projectsResult,studentsResult] = await Promise.all([
+      db.from("projects").select("*")
+        .eq("deleted",includeDeleted)
+        .order("created_at",{ascending:false}),
+      db.from("students").select("id,name,student_class")
+        .eq("deleted",false)
+        .order("name")
+    ]);
+
+    if (projectsResult.error) throw projectsResult.error;
+    if (studentsResult.error) throw studentsResult.error;
+
+    projectCache = projectsResult.data || [];
+    projectStudents = studentsResult.data || [];
+
+    if (includeDeleted) {
+      drawProjectTrashRows(projectCache);
+    } else {
+      drawProjectRows(projectCache);
+    }
+  } catch (error) {
+    $("projectCount").textContent = "Could not load projects.";
+    $("projectsTable").innerHTML = `
+      <tr><td colspan="6" class="empty">${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+function getProjectStudentName(project) {
+  const student = projectStudents.find(item => item.id === project.student_id);
+  return student ? student.name : (project.student_id || "Not assigned");
+}
+
+function getProjectStatusClass(status) {
+  if (status === "Completed") return "status-completed";
+  if (status === "On Hold") return "status-on-hold";
+  if (status === "Cancelled") return "status-cancelled";
+  return "";
+}
+
+function filterProjects() {
+  const term = $("projectSearch").value.toLowerCase().trim();
+
+  const filtered = projectCache.filter(project => {
+    const studentName = getProjectStudentName(project);
+
+    const searchable = [
+      project.id,
+      project.name,
+      studentName,
+      project.mentor,
+      project.status,
+      project.description
+    ].join(" ").toLowerCase();
+
+    return searchable.includes(term);
+  });
+
+  drawProjectRows(filtered);
+}
+
+function drawProjectRows(rows) {
+  $("projectCount").textContent = `${rows.length} active project(s)`;
+
+  if (!rows.length) {
+    $("projectsTable").innerHTML = `
+      <tr><td colspan="6" class="empty">
+        No projects found. Click Add Project to create your first project.
+      </td></tr>`;
+    return;
+  }
+
+  $("projectsTable").innerHTML = rows.map(project => `
+    <tr>
+      <td>
+        <strong>${escapeHTML(project.name)}</strong>
+        <div class="small muted">${escapeHTML(project.id)}</div>
+      </td>
+      <td>${escapeHTML(getProjectStudentName(project))}</td>
+      <td>${escapeHTML(project.mentor || "—")}</td>
+      <td>
+        <span class="project-status ${getProjectStatusClass(project.status)}">
+          ${escapeHTML(project.status || "Planning")}
+        </span>
+      </td>
+      <td>${escapeHTML(formatDate(project.target_date))}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-outline" data-project-view="${escapeHTML(project.id)}">View</button>
+          <button class="btn btn-outline" data-project-edit="${escapeHTML(project.id)}">Edit</button>
+          <button class="btn btn-danger" data-project-trash="${escapeHTML(project.id)}">Trash</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  $("projectsTable").querySelectorAll("[data-project-view]").forEach(button => {
+    button.onclick = () => {
+      const project = projectCache.find(item => item.id === button.dataset.projectView);
+      if (project) viewProject(project);
+    };
+  });
+
+  $("projectsTable").querySelectorAll("[data-project-edit]").forEach(button => {
+    button.onclick = () => {
+      const project = projectCache.find(item => item.id === button.dataset.projectEdit);
+      if (project) openProjectForm(project);
+    };
+  });
+
+  $("projectsTable").querySelectorAll("[data-project-trash]").forEach(button => {
+    button.onclick = () => moveProjectToTrash(button.dataset.projectTrash);
+  });
+}
+
+
+/* PROJECT FORM */
+
+function openProjectForm(project=null) {
+  editingProjectId = project ? project.id : null;
+
+  $("projectForm").reset();
+  $("projectFormError").textContent = "";
+  $("projectModalTitle").textContent = project ? "Edit Project" : "Add Project";
+  $("saveProjectButton").textContent = project ? "Save Changes" : "Create Project";
+
+  $("projectStudent").innerHTML = `
+    <option value="">Not assigned</option>
+    ${projectStudents.map(student => `
+      <option value="${escapeHTML(student.id)}" ${project?.student_id === student.id ? "selected" : ""}>
+        ${escapeHTML(student.name)}${student.student_class ? " - " + escapeHTML(student.student_class) : ""}
+      </option>
+    `).join("")}
+  `;
+
+  $("projectName").value = project?.name || "";
+  $("projectMentor").value = project?.mentor || "";
+  $("projectStartDate").value = project?.start_date || "";
+  $("projectTargetDate").value = project?.target_date || "";
+  $("projectBudget").value = project?.budget ?? "";
+  $("projectStatus").value = PROJECT_STATUSES.includes(project?.status)
+    ? project.status
+    : "Planning";
+  $("projectDescription").value = project?.description || "";
+
+  $("projectModal").classList.remove("hidden");
+}
+
+function closeProjectForm() {
+  $("projectModal").classList.add("hidden");
+  editingProjectId = null;
+}
+
+async function saveProject(event) {
+  event.preventDefault();
+
+  const button = $("saveProjectButton");
+  const wasEditing = Boolean(editingProjectId);
+  const projectId = editingProjectId;
+
+  button.disabled = true;
+  button.textContent = "Saving...";
+  $("projectFormError").textContent = "";
+
+  const name = $("projectName").value.trim();
+  const budgetText = $("projectBudget").value.trim();
+  const budget = budgetText === "" ? null : Number(budgetText);
+
+  if (!name) {
+    $("projectFormError").textContent = "Project name is required.";
+    button.disabled = false;
+    button.textContent = wasEditing ? "Save Changes" : "Create Project";
+    return;
+  }
+
+  if (budget !== null && (!Number.isFinite(budget) || budget < 0)) {
+    $("projectFormError").textContent = "Please enter a valid non-negative budget.";
+    button.disabled = false;
+    button.textContent = wasEditing ? "Save Changes" : "Create Project";
+    return;
+  }
+
+  const projectData = {
+    name,
+    student_id:$("projectStudent").value || null,
+    mentor:$("projectMentor").value.trim() || null,
+    start_date:$("projectStartDate").value || null,
+    target_date:$("projectTargetDate").value || null,
+    budget,
+    status:$("projectStatus").value,
+    description:$("projectDescription").value.trim() || null
+  };
+
+  if (projectData.start_date && projectData.target_date &&
+      projectData.target_date < projectData.start_date) {
+    $("projectFormError").textContent = "Target date cannot be earlier than start date.";
+    button.disabled = false;
+    button.textContent = wasEditing ? "Save Changes" : "Create Project";
+    return;
+  }
+
+  try {
+    let error;
+
+    if (wasEditing) {
+      const result = await db.from("projects")
+        .update(projectData)
+        .eq("id",projectId)
+        .eq("deleted",false);
+
+      error = result.error;
+    } else {
+      const newId = "PRJ-" + Date.now();
+
+      const result = await db.from("projects").insert({
+        id:newId,
+        ...projectData,
+        deleted:false,
+        deleted_at:null,
+        deleted_by:null
+      });
+
+      error = result.error;
+    }
+
+    if (error) throw error;
+
+    await logActivity(
+      wasEditing ? "UPDATE PROJECT" : "ADD PROJECT",
+      projectData.name
+    );
+
+    closeProjectForm();
+    showToast(wasEditing ? "Project updated successfully." : "Project created successfully.");
+    await renderProjects();
+  } catch (error) {
+    $("projectFormError").textContent = "Could not save project: " + error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = wasEditing ? "Save Changes" : "Create Project";
+  }
+}
+
+
+/* PROJECT DETAILS */
+
+function viewProject(project) {
+  const studentName = getProjectStudentName(project);
+
+  const fields = [
+    ["Project ID",project.id],
+    ["Project Name",project.name],
+    ["Assigned Student",studentName],
+    ["Mentor",project.mentor],
+    ["Start Date",formatDate(project.start_date)],
+    ["Target Date",formatDate(project.target_date)],
+    ["Budget",project.budget == null ? "—" : String(project.budget)],
+    ["Status",project.status],
+    ["Description",project.description]
+  ];
+
+  $("projectDetails").innerHTML = fields.map(field => `
+    <div style="padding:12px 0;border-bottom:1px solid #e5e9f2">
+      <div class="small muted">${escapeHTML(field[0])}</div>
+      <strong class="project-description">${escapeHTML(field[1] || "—")}</strong>
+    </div>
+  `).join("");
+
+  $("projectViewModal").classList.remove("hidden");
+}
+
+
+/* PROJECT TRASH */
+
+async function moveProjectToTrash(id) {
+  const project = projectCache.find(item => item.id === id);
+  if (!project) return;
+
+  const confirmed = await atlConfirm(
+    `Move "${project.name}" to Trash? You can restore it later.`,
+    "Move project to Trash",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("projects")
+      .update({
+        deleted:true,
+        deleted_at:new Date().toISOString(),
+        deleted_by:currentUser.id
+      })
+      .eq("id",id)
+      .eq("deleted",false);
+
+    if (error) throw error;
+
+    await logActivity("MOVE PROJECT TO TRASH",id + " - " + project.name);
+    showToast("Project moved to Trash.");
+    await renderProjects();
+  } catch (error) {
+    await atlAlert("Could not move project to Trash: " + error.message,"Error","⚠");
+  }
+}
+
+async function renderProjectTrash() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Project Trash</h1>
+        <p>Restore deleted projects or permanently delete them.</p>
+      </div>
+      <button class="btn btn-outline" id="backToProjects">← Active Projects</button>
+    </div>
+
+    <div class="panel">
+      <div class="notice">Projects in Trash are hidden from the active Projects list.</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th><th>Student</th><th>Mentor</th>
+              <th>Deleted At</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="projectsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("backToProjects").onclick = renderProjects;
+  await loadProjects(true);
+}
+
+function drawProjectTrashRows(rows) {
+  if (!rows.length) {
+    $("projectsTable").innerHTML = `
+      <tr><td colspan="5" class="empty">Project Trash is empty.</td></tr>`;
+    return;
+  }
+
+  $("projectsTable").innerHTML = rows.map(project => `
+    <tr>
+      <td>
+        <strong>${escapeHTML(project.name)}</strong>
+        <div class="small muted">${escapeHTML(project.id)}</div>
+      </td>
+      <td>${escapeHTML(getProjectStudentName(project))}</td>
+      <td>${escapeHTML(project.mentor || "—")}</td>
+      <td>${escapeHTML(formatDate(project.deleted_at))}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-success" data-project-restore="${escapeHTML(project.id)}">Restore</button>
+          ${isAdmin() ? `<button class="btn btn-danger" data-project-permanent="${escapeHTML(project.id)}">Delete Forever</button>` : ""}
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  $("projectsTable").querySelectorAll("[data-project-restore]").forEach(button => {
+    button.onclick = () => restoreProject(button.dataset.projectRestore);
+  });
+
+  $("projectsTable").querySelectorAll("[data-project-permanent]").forEach(button => {
+    button.onclick = () => permanentlyDeleteProject(button.dataset.projectPermanent);
+  });
+}
+
+async function restoreProject(id) {
+  const confirmed = await atlConfirm("Restore this project?","Restore project");
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("projects")
+      .update({deleted:false,deleted_at:null,deleted_by:null})
+      .eq("id",id)
+      .eq("deleted",true);
+
+    if (error) throw error;
+
+    await logActivity("RESTORE PROJECT",id);
+    showToast("Project restored.");
+    await renderProjectTrash();
+  } catch (error) {
+    await atlAlert("Could not restore project: " + error.message,"Restore failed","⚠");
+  }
+}
+
+async function permanentlyDeleteProject(id) {
+  if (!isAdmin()) {
+    await atlAlert("Only Admin can permanently delete projects.","Access denied","🔒");
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    "Permanently delete this project? This action cannot be undone.",
+    "Permanent project deletion",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("projects")
+      .delete()
+      .eq("id",id)
+      .eq("deleted",true);
+
+    if (error) throw error;
+
+    await logActivity("PERMANENTLY DELETE PROJECT",id);
+    showToast("Project permanently deleted.");
+    await renderProjectTrash();
+  } catch (error) {
+    await atlAlert("Could not permanently delete project: " + error.message,"Deletion failed","⚠");
+  }
+}
+
+
+/* =========================================================
+   COMPONENTS INVENTORY
+========================================================= */
+
+
+async function checkDuplicateComponent(name, code, excludeId = null) {
+  let query = db.from("components")
+    .select("id, name, component_code")
+    .eq("deleted", false);
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  const duplicate = (data || []).find(component => {
+    if (excludeId && component.id === excludeId) return false;
+
+    const sameName =
+      component.name?.trim().toLowerCase() === name.trim().toLowerCase();
+
+    const sameCode =
+      code &&
+      component.component_code?.trim().toLowerCase() === code.trim().toLowerCase();
+
+    return sameName || sameCode;
+  });
+
+  return duplicate || null;
+}
+
+async function fetchComponents(includeDeleted = false) {
+  const { data, error } = await db.from("components")
+    .select("*")
+    .eq("deleted", Boolean(includeDeleted))
+    .order("name");
+
+  if (error) throw error;
+  return data || [];
+}
+
+async function renderComponents() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Components Inventory</h1>
+        <p>Manage your electronic component list and component codes.</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="componentTrashButton">🗑 View Trash</button>
+        <button class="btn btn-primary" id="addComponentButton">＋ Add Component</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <div class="search">
+          <input id="componentSearch" placeholder="Search component name or code...">
+        </div>
+        <button class="btn btn-outline" id="refreshComponents">↻ Refresh</button>
+      </div>
+
+      <div class="small muted" id="componentCount">Loading components...</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th><th>Code</th><th>Total Stock</th>
+              <th>Available</th><th>Minimum Stock</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="componentsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("addComponentButton").onclick = () => openComponentForm();
+  $("componentTrashButton").onclick = renderComponentTrash;
+  $("refreshComponents").onclick = renderComponents;
+  $("componentSearch").addEventListener("input",filterComponents);
+
+  try {
+    componentCache = await fetchComponents(false);
+    drawComponentRows(componentCache);
+  } catch (error) {
+    $("componentCount").textContent = "Could not load components.";
+    $("componentsTable").innerHTML = `
+      <tr><td colspan="7" class="empty">${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+async function renderIssueReturn() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Component Issue Register</h1>
+        <p>Record which student took which component and when.</p>
+      </div>
+      <button class="btn btn-primary" id="addIssueButton">
+        + Record Issue
+      </button>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <input id="issueSearch" placeholder="Search student or component...">
+        <button class="btn btn-outline" id="refreshIssues">↻ Refresh</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Component</th>
+              <th>Quantity</th>
+              <th>Date Taken</th>
+              <th>Recorded By</th>
+            </tr>
+          </thead>
+          <tbody id="issuesTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("addIssueButton").onclick = openIssueForm;
+  $("refreshIssues").onclick = renderIssueReturn;
+  $("issueSearch").addEventListener("input", () => {
+    const term = $("issueSearch").value.toLowerCase().trim();
+    document.querySelectorAll("#issuesTable tr").forEach(row => {
+      row.classList.toggle("hidden", !row.textContent.toLowerCase().includes(term));
+    });
+  });
+
+  await loadIssueHistory();
+}
+
+async function loadIssueHistory() {
+  const table = $("issuesTable");
+
+  table.innerHTML = `
+    <tr><td colspan="5" class="empty">Loading records...</td></tr>
+  `;
+
+  try {
+    const { data, error } = await db
+      .from("component_issues")
+      .select("*")
+      .eq("deleted", false)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      table.innerHTML = `
+        <tr>
+          <td colspan="5" class="empty">No issue records yet.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    const componentIds = [...new Set(data.map(item => item.component_id))];
+    const studentIds = [...new Set(data.map(item => item.student_id).filter(Boolean))];
+
+    const componentResult = await db.from("components")
+      .select("id, name")
+      .in("id", componentIds);
+
+    if (componentResult.error) throw componentResult.error;
+
+    let students = [];
+    if (studentIds.length) {
+      const studentResult = await db.from("students")
+        .select("*")
+        .in("id", studentIds);
+      if (studentResult.error) throw studentResult.error;
+      students = studentResult.data || [];
+    }
+
+    const components = componentResult.data || [];
+
+    const componentMap = Object.fromEntries(
+      (components || []).map(item => [item.id, item.name])
+    );
+
+    const studentMap = Object.fromEntries(
+      (students || []).map(item => [item.id, item])
+    );
+
+    const issuedByIds = [...new Set(data.map(item => item.issued_by).filter(Boolean))];
+    let profileMap = {};
+    if (issuedByIds.length) {
+      const profileResult = await db.from("profiles")
+        .select("id, username, role")
+        .in("id", issuedByIds);
+      if (!profileResult.error) {
+        profileMap = Object.fromEntries(
+          (profileResult.data || []).map(profile => [profile.id, profile])
+        );
+      }
+    }
+
+    table.innerHTML = data.map(item => {
+      const student = studentMap[item.student_id];
+      const studentName = item.person_name || student?.name || "Unknown";
+      const componentName = componentMap[item.component_id] || "Unknown";
+      const issuer = profileMap[item.issued_by];
+      const recordedBy = issuer?.username
+        || (item.issued_by === currentUser?.id
+          ? (currentProfile?.username || currentProfile?.role || "Current user")
+          : (issuer?.role || (item.issued_by ? "Staff member" : "—")));
+
+      return `
+        <tr>
+          <td>${escapeHTML(studentName)}</td>
+          <td>${escapeHTML(componentName)}</td>
+          <td>${Number(item.quantity_issued)}</td>
+          <td>${escapeHTML(item.issue_date || "—")}</td>
+          <td>${escapeHTML(recordedBy)}</td>
+        </tr>
+      `;
+    }).join("");
+
+  } catch (error) {
+    table.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty">${escapeHTML(error.message)}</td>
+      </tr>
+    `;
+  }
+}
+
+function getComponentStatus(component) {
+  const available = Number(component.available_quantity || 0);
+  const minimum = Number(component.minimum_stock || 0);
+
+  if (available <= 0) {
+    return {text:"Out of Stock",className:"stock-out"};
+  }
+
+  if (minimum > 0 && available <= minimum) {
+    return {text:"Low Stock",className:"stock-low"};
+  }
+
+  return {text:"In Stock",className:"stock-good"};
+}
+
+function filterComponents() {
+  const term = $("componentSearch").value.toLowerCase().trim();
+
+  const filtered = componentCache.filter(component => {
+    const searchable = [
+      component.name,
+      component.component_code
+    ].join(" ").toLowerCase();
+
+    return searchable.includes(term);
+  });
+
+  drawComponentRows(filtered);
+}
+
+function drawComponentRows(rows) {
+  $("componentCount").textContent = `${rows.length} component(s)`;
+
+  if (!rows.length) {
+    $("componentsTable").innerHTML = `
+      <tr><td colspan="7" class="empty">
+        No components found. Click Add Component to create one.
+      </td></tr>`;
+    return;
+  }
+
+  $("componentsTable").innerHTML = rows.map(component => {
+    const status = getComponentStatus(component);
+
+    return `
+      <tr>
+        <td><strong>${escapeHTML(component.name)}</strong></td>
+        <td>${escapeHTML(component.component_code || "—")}</td>
+        <td>${Number(component.total_quantity || 0)}</td>
+        <td><strong>${Number(component.available_quantity || 0)}</strong></td>
+        <td>${Number(component.minimum_stock || 0)}</td>
+        <td><span class="tag ${status.className}">${status.text}</span></td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-outline" data-component-edit="${component.id}">Edit</button>
+            <button class="btn btn-danger" data-component-trash="${component.id}">Trash</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  $("componentsTable").querySelectorAll("[data-component-edit]").forEach(button => {
+    button.onclick = () => {
+      const component = componentCache.find(item => item.id === button.dataset.componentEdit);
+      if (component) openComponentForm(component);
+    };
+  });
+
+  $("componentsTable").querySelectorAll("[data-component-trash]").forEach(button => {
+    button.onclick = () => moveComponentToTrash(button.dataset.componentTrash);
+  });
+}
+
+
+/* COMPONENT ADD / EDIT */
+
+function openComponentForm(component=null) {
+  editingComponentId = component ? component.id : null;
+
+  $("componentForm").reset();
+  $("componentFormError").textContent = "";
+
+  $("componentModalTitle").textContent = component ? "Edit Component" : "Add Component";
+  $("saveComponentButton").textContent = component ? "Save Changes" : "Save Component";
+
+  $("componentName").value = component?.name || "";
+  $("componentCode").value = component?.component_code || "";
+  $("componentTotalQuantity").value = component?.total_quantity ?? 0;
+  $("componentMinimumStock").value = component?.minimum_stock ?? 0;
+
+  $("componentTotalQuantity").disabled = !!component;
+  $("componentTotalLabel").textContent = component
+    ? "Saved Opening Quantity (stock editing will be added later)"
+    : "Opening Quantity *";
+
+  $("componentModal").classList.remove("hidden");
+}
+
+function closeComponentForm() {
+  $("componentModal").classList.add("hidden");
+  editingComponentId = null;
+}
+
+async function saveComponent(event) {
+  event.preventDefault();
+
+  const button = $("saveComponentButton");
+  const wasEditing = Boolean(editingComponentId);
+  const componentId = editingComponentId;
+
+  button.disabled = true;
+  button.textContent = "Saving...";
+  $("componentFormError").textContent = "";
+
+  const name = $("componentName").value.trim();
+  const code = $("componentCode").value.trim() || null;
+  const quantity = Number($("componentTotalQuantity").value);
+  const minimum = Number($("componentMinimumStock").value);
+
+  try {
+    if (!name) throw new Error("Component name is required.");
+
+    if (!Number.isInteger(minimum) || minimum < 0) {
+      throw new Error("Minimum stock must be a valid whole number.");
+    }
+
+    if (!wasEditing && (!Number.isInteger(quantity) || quantity < 0)) {
+      throw new Error("Opening quantity must be a valid whole number.");
+    }
+
+    const duplicate = await checkDuplicateComponent(
+      name,
+      code,
+      wasEditing ? componentId : null
+    );
+
+    if (duplicate) {
+      if (duplicate.name?.trim().toLowerCase() === name.toLowerCase()) {
+        throw new Error("Already Existing! Component name is already registered.");
+      }
+
+      throw new Error("Already Existing! Component code is already registered.");
+    }
+
+    if (wasEditing) {
+      const { error } = await db.from("components")
+        .update({
+          name,
+          component_code: code,
+          minimum_stock: minimum,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", componentId)
+        .eq("deleted", false);
+
+      if (error) throw error;
+
+      await logActivity("UPDATE COMPONENT", name);
+      showToast("Component updated successfully.");
+
+    } else {
+      const { error } = await db.from("components").insert({
+        name,
+        component_code: code,
+        total_quantity: quantity,
+        available_quantity: quantity,
+        minimum_stock: minimum,
+        deleted: false,
+        deleted_at: null,
+        deleted_by: null
+      });
+
+      if (error) throw error;
+
+      await logActivity("ADD COMPONENT", name);
+      showToast("Component added successfully.");
+    }
+
+    closeComponentForm();
+    await renderComponents();
+
+  } catch (error) {
+    $("componentFormError").textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = wasEditing ? "Save Changes" : "Save Component";
+  }
+}
+
+async function moveComponentToTrash(id) {
+  const component = componentCache.find(item => item.id === id);
+  const componentName = component?.name || "this component";
+  const confirmed = await atlConfirm(
+    `Move ${componentName} to Trash?`,
+    "Move component to Trash",
+    true
+  );
+  if (!confirmed) return;
+
+  try {
+    const { error } = await db.from("components")
+      .update({
+        deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: currentUser?.id || null
+      })
+      .eq("id", id)
+      .eq("deleted", false);
+
+    if (error) throw error;
+    await logActivity("MOVE COMPONENT TO TRASH", componentName);
+    showToast("Component moved to Trash.");
+    await renderComponents();
+  } catch (error) {
+    await atlAlert("Could not move component to Trash: " + error.message, "Delete failed", "⚠");
+  }
+}
+
+async function renderComponentTrash() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Components Trash</h1>
+        <p>Restore deleted components or permanently delete them as Admin.</p>
+      </div>
+      <button class="btn btn-outline" id="backToTrash">← Back to Trash</button>
+    </div>
+    <div class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Component</th><th>Code</th><th>Deleted At</th><th>Actions</th></tr></thead>
+          <tbody id="componentTrashTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("backToTrash").onclick = renderTrash;
+  const table = $("componentTrashTable");
+  table.innerHTML = `<tr><td colspan="4" class="empty">Loading deleted components...</td></tr>`;
+
+  try {
+    const rows = await fetchComponents(true);
+    if (!rows.length) {
+      table.innerHTML = `<tr><td colspan="4" class="empty">Components Trash is empty.</td></tr>`;
+      return;
+    }
+
+    table.innerHTML = rows.map(component => `
+      <tr>
+        <td><strong>${escapeHTML(component.name)}</strong></td>
+        <td>${escapeHTML(component.component_code || "—")}</td>
+        <td>${escapeHTML(formatDate(component.deleted_at))}</td>
+        <td><div class="actions">
+          <button class="btn btn-success" data-restore-component="${component.id}">Restore</button>
+          ${isAdmin() ? `<button class="btn btn-danger" data-permanent-component="${component.id}">Delete permanently</button>` : ""}
+        </div></td>
+      </tr>
+    `).join("");
+
+    table.querySelectorAll("[data-restore-component]").forEach(button => {
+      button.onclick = () => restoreComponent(button.dataset.restoreComponent);
+    });
+    table.querySelectorAll("[data-permanent-component]").forEach(button => {
+      button.onclick = () => permanentlyDeleteComponent(button.dataset.permanentComponent);
+    });
+  } catch (error) {
+    table.innerHTML = `<tr><td colspan="4" class="empty">Could not load component Trash: ${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+async function restoreComponent(id) {
+  const confirmed = await atlConfirm("Restore this component?", "Restore component");
+  if (!confirmed) return;
+
+  try {
+    const { error } = await db.from("components")
+      .update({ deleted: false, deleted_at: null, deleted_by: null })
+      .eq("id", id)
+      .eq("deleted", true);
+    if (error) throw error;
+
+    await logActivity("RESTORE COMPONENT", id);
+    showToast("Component restored.");
+    await renderComponentTrash();
+  } catch (error) {
+    await atlAlert("Could not restore component: " + error.message, "Restore failed", "⚠");
+  }
+}
+
+async function permanentlyDeleteComponent(id) {
+  if (!isAdmin()) {
+    await atlAlert("Only Admin can permanently delete components.", "Access denied", "🔒");
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    "Permanently delete this component? This action cannot be undone.",
+    "Permanent deletion",
+    true
+  );
+  if (!confirmed) return;
+
+  try {
+    const { error } = await db.from("components")
+      .delete()
+      .eq("id", id)
+      .eq("deleted", true);
+    if (error) throw error;
+
+    await logActivity("PERMANENTLY DELETE COMPONENT", id);
+    showToast("Component permanently deleted.");
+    await renderComponentTrash();
+  } catch (error) {
+    await atlAlert("Could not permanently delete component: " + error.message, "Deletion failed", "⚠");
+  }
+}
+
+
+/* =========================================================
+   ISSUE / RETURN MODULE
+========================================================= */
+
+function getIssueComponentName(issue) {
+  const component = issueComponentCache.find(item => item.id === issue.component_id);
+  return component?.name || "Component not found";
+}
+
+function getIssueOutstanding(issue) {
+  return Math.max(
+    0,
+    Number(issue.quantity_issued || 0) - Number(issue.quantity_returned || 0)
+  );
+}
+
+async function loadIssueData(includeDeleted=false) {
+  const [issuesResult,componentsResult,studentsResult] = await Promise.all([
+    db.from("component_issues")
+      .select("*")
+      .eq("deleted",includeDeleted)
+      .order("issue_date",{ascending:false})
+      .order("created_at",{ascending:false}),
+
+    db.from("components").select("*").order("name"),
+
+    db.from("students").select("id,name,student_class")
+      .eq("deleted",false)
+      .order("name")
+  ]);
+
+  if (issuesResult.error) throw issuesResult.error;
+  if (componentsResult.error) throw componentsResult.error;
+  if (studentsResult.error) throw studentsResult.error;
+
+  issueCache = issuesResult.data || [];
+  issueComponentCache = componentsResult.data || [];
+  issueStudentCache = studentsResult.data || [];
+}
+
+async function renderIssues() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Component Issue / Return</h1>
+        <p>Track components issued to ATL students and external persons.</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="issueTrashButton">🗑 View Trash</button>
+        <button class="btn btn-primary" id="newIssueButton">＋ Issue Component</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <div class="search">
+          <input id="issueSearch" placeholder="Search component, person or status...">
+        </div>
+        <button class="btn btn-outline" id="refreshIssues">↻ Refresh</button>
+      </div>
+
+      <div class="small muted" id="issueCount">Loading issue records...</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Issue Date</th><th>Component</th><th>Person</th>
+              <th>Issued</th><th>Returned</th><th>Outstanding</th>
+              <th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="issuesTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("newIssueButton").onclick = openIssueForm;
+  $("issueTrashButton").onclick = renderIssueTrash;
+  $("refreshIssues").onclick = renderIssues;
+  $("issueSearch").addEventListener("input",filterIssues);
+
+  try {
+    await loadIssueData(false);
+    drawIssueRows(issueCache);
+  } catch (error) {
+    $("issueCount").textContent = "Could not load issue records.";
+    $("issuesTable").innerHTML = `
+      <tr><td colspan="8" class="empty">${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+function filterIssues() {
+  const term = $("issueSearch").value.toLowerCase().trim();
+
+  const filtered = issueCache.filter(issue => {
+    const searchable = [
+      getIssueComponentName(issue),
+      issue.person_name,
+      issue.person_type,
+      issue.student_id,
+      issue.status,
+      issue.notes
+    ].join(" ").toLowerCase();
+
+    return searchable.includes(term);
+  });
+
+  drawIssueRows(filtered);
+}
+
+function getIssueStatusClass(status) {
+  if (status === "Returned") return "status-returned";
+  if (status === "Partially Returned") return "status-partial";
+  return "status-issued";
+}
+
+function drawIssueRows(rows) {
+  $("issueCount").textContent = `${rows.length} issue record(s)`;
+
+  if (!rows.length) {
+    $("issuesTable").innerHTML = `
+      <tr><td colspan="8" class="empty">
+        No issue records found. Click Issue Component to create one.
+      </td></tr>`;
+    return;
+  }
+
+  $("issuesTable").innerHTML = rows.map(issue => {
+    const outstanding = getIssueOutstanding(issue);
+    const returned = Number(issue.quantity_returned || 0);
+
+    return `
+      <tr>
+        <td>${escapeHTML(formatDate(issue.issue_date))}</td>
+        <td><strong>${escapeHTML(getIssueComponentName(issue))}</strong></td>
+        <td>
+          ${escapeHTML(issue.person_name)}
+          <div class="small muted">${escapeHTML(issue.person_type)}</div>
+        </td>
+        <td>${Number(issue.quantity_issued)}</td>
+        <td>${returned}</td>
+        <td><strong>${outstanding}</strong></td>
+        <td>
+          <span class="tag ${getIssueStatusClass(issue.status)}">
+            ${escapeHTML(issue.status)}
+          </span>
+        </td>
+        <td>
+          <div class="actions">
+            ${outstanding > 0 ? `<button class="btn btn-success" data-issue-return="${issue.id}">Return</button>` : ""}
+            <button class="btn btn-outline" data-issue-history="${issue.id}">History</button>
+            ${outstanding === 0 ? `<button class="btn btn-danger" data-issue-trash="${issue.id}">Trash</button>` : ""}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  $("issuesTable").querySelectorAll("[data-issue-return]").forEach(button => {
+    button.onclick = () => {
+      const issue = issueCache.find(item => item.id === button.dataset.issueReturn);
+      if (issue) openReturnForm(issue);
+    };
+  });
+
+  $("issuesTable").querySelectorAll("[data-issue-history]").forEach(button => {
+    button.onclick = () => {
+      const issue = issueCache.find(item => item.id === button.dataset.issueHistory);
+      if (issue) showIssueHistory(issue);
+    };
+  });
+
+  $("issuesTable").querySelectorAll("[data-issue-trash]").forEach(button => {
+    button.onclick = () => moveIssueToTrash(button.dataset.issueTrash);
+  });
+}
+
+
+/* ISSUE FORM HELPERS */
+
+async function openIssueForm() {
+  $("issueForm").reset();
+  $("issueFormError").textContent = "";
+  $("issueQuantity").value = 1;
+  $("issueDate").value = todayLocal();
+
+  try {
+    const [components, students] = await Promise.all([
+      fetchComponents(false),
+      fetchStudents(false)
+    ]);
+
+    issueComponentCache = components;
+    issueStudentCache = students;
+
+    $("issueComponent").innerHTML = `
+      <option value="">Choose a component</option>
+      ${components.map(component => `
+        <option value="${component.id}">${escapeHTML(component.name)}</option>
+      `).join("")}
+    `;
+
+    $("issueStudent").innerHTML = `
+      <option value="">Choose a student</option>
+      ${students.map(student => `
+        <option value="${escapeHTML(student.id)}">${escapeHTML(student.name)} · ${escapeHTML(student.id)}</option>
+      `).join("")}
+    `;
+
+    if (!components.length) {
+      throw new Error("No active components found. Add a component first.");
+    }
+    if (!students.length) {
+      throw new Error("No active students found. Add a student first.");
+    }
+
+    $("issueModal").classList.remove("hidden");
+  } catch (error) {
+    await atlAlert("Could not open the issue form: " + error.message, "Issue form error", "⚠");
+  }
+}
+
+function closeIssueForm() {
+  $("issueModal").classList.add("hidden");
+}
+
+/* SAVE ISSUE */
+
+async function saveIssue(event) {
+  event.preventDefault();
+
+  const button = $("saveIssueButton");
+  button.disabled = true;
+  button.textContent = "Saving...";
+  $("issueFormError").textContent = "";
+
+  try {
+    const componentId = $("issueComponent").value;
+    const studentId = $("issueStudent").value;
+    const quantity = Number($("issueQuantity").value);
+    const issueDate = $("issueDate").value;
+
+    if (!componentId) throw new Error("Please select a component.");
+    if (!studentId) throw new Error("Please select an ATL student.");
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new Error("Quantity must be a whole number greater than zero.");
+    }
+    if (!issueDate) throw new Error("Date taken is required.");
+
+    const component = issueComponentCache.find(item => item.id === componentId);
+    const student = issueStudentCache.find(item => item.id === studentId);
+    if (!component) throw new Error("The selected component could not be found. Refresh and try again.");
+    if (!student) throw new Error("The selected student could not be found. Refresh and try again.");
+    if (!currentUser?.id) throw new Error("Your login session is missing. Please sign in again.");
+
+    // This is a register-only entry. It deliberately does not update component stock.
+    const { error } = await db.from("component_issues").insert({
+      component_id: componentId,
+      person_type: "ATL Student",
+      student_id: studentId,
+      person_name: student.name,
+      quantity_issued: quantity,
+      quantity_returned: 0,
+      issue_date: issueDate,
+      notes: $("issueNotes").value.trim() || null,
+      status: "Issued",
+      issued_by: currentUser.id,
+      deleted: false,
+      deleted_at: null,
+      deleted_by: null
+    });
+
+    if (error) throw error;
+
+    await logActivity(
+      "RECORD COMPONENT ISSUE",
+      `${student.name} (${student.id}) | ${component.name} | Quantity: ${quantity}`
+    );
+
+    closeIssueForm();
+    showToast("Issue record saved. Component stock was not changed.");
+    await renderIssueReturn();
+  } catch (error) {
+    $("issueFormError").textContent = error.message || "Could not save the issue record.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save Record";
+  }
+}
+
+/* =========================================================
+   RETURN COMPONENTS
+========================================================= */
+
+function openReturnForm(issue) {
+  selectedReturnIssue = issue;
+
+  const outstanding = getIssueOutstanding(issue);
+
+  $("returnForm").reset();
+  $("returnFormError").textContent = "";
+
+  $("returnIssueInfo").textContent =
+    `${getIssueComponentName(issue)} · ${issue.person_name} · Outstanding quantity: ${outstanding}`;
+
+  $("returnQuantity").value = outstanding;
+  $("returnQuantity").max = outstanding;
+  $("returnDate").value = todayLocal();
+
+  $("returnModal").classList.remove("hidden");
+}
+
+function closeReturnForm() {
+  $("returnModal").classList.add("hidden");
+  selectedReturnIssue = null;
+}
+
+async function saveReturn(event) {
+  event.preventDefault();
+
+  const button = $("saveReturnButton");
+  button.disabled = true;
+  button.textContent = "Saving...";
+  $("returnFormError").textContent = "";
+
+  try {
+    if (!selectedReturnIssue) {
+      throw new Error("No issue record selected.");
+    }
+
+    const quantity = Number($("returnQuantity").value);
+    const returnDate = $("returnDate").value;
+    const outstanding = getIssueOutstanding(selectedReturnIssue);
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new Error("Return quantity must be a whole number greater than zero.");
+    }
+
+    if (quantity > outstanding) {
+      throw new Error("You cannot return more than the outstanding quantity: " + outstanding);
+    }
+
+    if (!returnDate) {
+      throw new Error("Return date is required.");
+    }
+
+    const issueId = selectedReturnIssue.id;
+    const {data,error} = await db.rpc("return_component_issue",{
+      p_issue_id:issueId,
+      p_quantity:quantity,
+      p_return_date:returnDate,
+      p_notes:$("returnNotes").value.trim() || null
+    });
+
+    if (error) throw error;
+
+    await logActivity(
+      "RETURN COMPONENT",
+      `${selectedReturnIssue.person_name} | ${getIssueComponentName(selectedReturnIssue)} | Quantity: ${quantity}`
+    );
+
+    closeReturnForm();
+    showToast("Return saved. Stock has been updated.");
+    await renderIssues();
+  } catch (error) {
+    $("returnFormError").textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save Return";
+  }
+}
+
+
+/* =========================================================
+   RETURN HISTORY
+========================================================= */
+
+async function showIssueHistory(issue) {
+  $("issueHistoryInfo").textContent =
+    `${getIssueComponentName(issue)} · ${issue.person_name} · Issued: ${issue.quantity_issued} · Returned: ${issue.quantity_returned}`;
+
+  $("issueHistoryTable").innerHTML = `
+    <tr><td colspan="3" class="empty">Loading return history...</td></tr>`;
+
+  $("issueHistoryModal").classList.remove("hidden");
+
+  try {
+    const {data,error} = await db.from("component_returns")
+      .select("*")
+      .eq("issue_id",issue.id)
+      .order("return_date",{ascending:false})
+      .order("created_at",{ascending:false});
+
+    if (error) throw error;
+
+    if (!data?.length) {
+      $("issueHistoryTable").innerHTML = `
+        <tr><td colspan="3" class="empty">No returns have been recorded yet.</td></tr>`;
+      return;
+    }
+
+    $("issueHistoryTable").innerHTML = data.map(record => `
+      <tr>
+        <td>${escapeHTML(formatDate(record.return_date))}</td>
+        <td><strong>${Number(record.quantity)}</strong></td>
+        <td>${escapeHTML(record.notes || "—")}</td>
+      </tr>
+    `).join("");
+  } catch (error) {
+    $("issueHistoryTable").innerHTML = `
+      <tr><td colspan="3" class="empty">Could not load return history: ${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+
+/* =========================================================
+   ISSUE RECORD TRASH
+========================================================= */
+
+async function moveIssueToTrash(id) {
+  const issue = issueCache.find(item => item.id === id);
+  if (!issue) return;
+
+  if (getIssueOutstanding(issue) > 0) {
+    await atlAlert(
+      "This issue still has outstanding components. Complete all returns before moving it to Trash.",
+      "Return required",
+      "⚠"
+    );
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    `Move the issue record for "${issue.person_name}" to Trash?`,
+    "Move issue to Trash",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("component_issues")
+      .update({
+        deleted:true,
+        deleted_at:new Date().toISOString(),
+        deleted_by:currentUser.id
+      })
+      .eq("id",id)
+      .eq("deleted",false);
+
+    if (error) throw error;
+
+    await logActivity("MOVE ISSUE TO TRASH",id);
+    showToast("Issue record moved to Trash.");
+    await renderIssues();
+  } catch (error) {
+    await atlAlert("Could not move issue to Trash: " + error.message,"Error","⚠");
+  }
+}
+
+async function renderIssueTrash() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Issue Records Trash</h1>
+        <p>Restore completed issue records or permanently delete them.</p>
+      </div>
+      <button class="btn btn-outline" id="backToIssues">← Active Issue Records</button>
+    </div>
+
+    <div class="panel">
+      <div class="notice">
+        Issue records can only be moved to Trash after all issued quantities have been returned.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th><th>Person</th><th>Issued</th>
+              <th>Returned</th><th>Deleted At</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="issueTrashTable"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("backToIssues").onclick = renderIssues;
+
+  try {
+    await loadIssueData(true);
+
+    if (!issueCache.length) {
+      $("issueTrashTable").innerHTML = `
+        <tr><td colspan="6" class="empty">Issue Records Trash is empty.</td></tr>`;
+      return;
+    }
+
+    $("issueTrashTable").innerHTML = issueCache.map(issue => `
+      <tr>
+        <td>${escapeHTML(getIssueComponentName(issue))}</td>
+        <td>${escapeHTML(issue.person_name)}</td>
+        <td>${Number(issue.quantity_issued)}</td>
+        <td>${Number(issue.quantity_returned)}</td>
+        <td>${escapeHTML(formatDate(issue.deleted_at))}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-success" data-issue-restore="${issue.id}">Restore</button>
+            ${isAdmin() ? `<button class="btn btn-danger" data-issue-permanent="${issue.id}">Delete Forever</button>` : ""}
+          </div>
+        </td>
+      </tr>
+    `).join("");
+
+    $("issueTrashTable").querySelectorAll("[data-issue-restore]").forEach(button => {
+      button.onclick = () => restoreIssue(button.dataset.issueRestore);
+    });
+
+    $("issueTrashTable").querySelectorAll("[data-issue-permanent]").forEach(button => {
+      button.onclick = () => permanentlyDeleteIssue(button.dataset.issuePermanent);
+    });
+  } catch (error) {
+    $("issueTrashTable").innerHTML = `
+      <tr><td colspan="6" class="empty">${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+async function restoreIssue(id) {
+  const confirmed = await atlConfirm("Restore this issue record?","Restore issue");
+  if (!confirmed) return;
+
+  try {
+    const {error} = await db.from("component_issues")
+      .update({deleted:false,deleted_at:null,deleted_by:null})
+      .eq("id",id)
+      .eq("deleted",true);
+
+    if (error) throw error;
+
+    await logActivity("RESTORE ISSUE RECORD",id);
+    showToast("Issue record restored.");
+    await renderIssueTrash();
+  } catch (error) {
+    await atlAlert("Could not restore issue: " + error.message,"Restore failed","⚠");
+  }
+}
+
+async function permanentlyDeleteIssue(id) {
+  if (!isAdmin()) {
+    await atlAlert("Only Admin can permanently delete issue records.","Access denied","🔒");
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    "Permanently delete this issue record and its return history? This cannot be undone.",
+    "Permanent issue deletion",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const {data,error} = await db.rpc("permanently_delete_component_issue",{
+      p_issue_id:id
+    });
+
+    if (error) throw error;
+
+    if (!data) {
+      throw new Error("Issue record was not found.");
+    }
+
+    await logActivity("PERMANENTLY DELETE ISSUE",id);
+    showToast("Issue record permanently deleted.");
+    await renderIssueTrash();
+  } catch (error) {
+    await atlAlert("Permanent deletion failed: " + error.message,"Deletion failed","⚠");
+  }
+}
+
+
+/* =========================================================
+   CSV IMPORT - PARSER
+========================================================= */
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let quoted = false;
+
+  text = text.replace(/^\uFEFF/,"");
+
+  for (let i=0;i<text.length;i++) {
+    const char = text[i];
+    const next = text[i+1];
+
+    if (char === '"') {
+      if (quoted && next === '"') {
+        value += '"';
+        i++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (char === "," && !quoted) {
+      row.push(value);
+      value = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") i++;
+      row.push(value);
+      if (row.some(cell => cell.trim() !== "")) rows.push(row);
+      row = [];
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+
+  row.push(value);
+  if (row.some(cell => cell.trim() !== "")) rows.push(row);
+
+  return rows;
+}
+
+function normalizeHeader(header) {
+  return String(header || "").trim().toLowerCase()
+    .replace(/[\s_-]+/g,"")
+    .replace(/[^a-z0-9]/g,"");
+}
+
+function getCsvColumn(row,headerMap,names) {
+  for (const name of names) {
+    const index = headerMap[normalizeHeader(name)];
+    if (index !== undefined) return String(row[index] ?? "").trim();
+  }
+  return "";
+}
+
+
+/* CSV MODAL */
+
+function openCsvModal() {
+  resetCsvImport();
+  $("csvModal").classList.remove("hidden");
+}
+
+function closeCsvModal() {
+  $("csvModal").classList.add("hidden");
+  resetCsvImport();
+}
+
+function resetCsvImport() {
+  csvRows = [];
+  csvValidRows = [];
+  csvInvalidRows = [];
+
+  $("csvFile").value = "";
+  $("csvSelectedName").textContent = "No file selected";
+  $("csvStatus").textContent = "No file selected.";
+  $("csvStatus").className = "csv-status muted";
+  $("csvPreview").classList.add("hidden");
+  $("csvPreviewHead").innerHTML = "";
+  $("csvPreviewBody").innerHTML = "";
+  $("importCsvButton").disabled = true;
+  $("importCsvButton").textContent = "Import Students";
+}
+
+function resetCsvPreviewOnly() {
+  csvRows = [];
+  csvValidRows = [];
+  csvInvalidRows = [];
+
+  $("csvStatus").textContent = "Reading CSV file...";
+  $("csvStatus").className = "csv-status muted";
+  $("csvPreview").classList.add("hidden");
+  $("csvPreviewHead").innerHTML = "";
+  $("csvPreviewBody").innerHTML = "";
+  $("importCsvButton").disabled = true;
+  $("importCsvButton").textContent = "Import Students";
+}
+
+
+/* CSV FILE PICKER */
+
+function selectCsvFile() {
+  const input = $("csvFile");
+  input.value = "";
+
+  try {
+    if (typeof input.showPicker === "function") input.showPicker();
+    else input.click();
+  } catch (error) {
+    input.click();
+  }
+}
+
+
+/* CSV FILE PROCESSING */
+
+async function handleCsvFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  resetCsvPreviewOnly();
+  $("csvSelectedName").textContent = "Selected: " + file.name;
+
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    $("csvStatus").textContent = "Please select a file ending in .csv";
+    $("csvStatus").className = "csv-status csv-bad";
+    $("csvFile").value = "";
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const parsed = parseCSV(text);
+
+    if (parsed.length < 2) {
+      throw new Error("The CSV file has no student records.");
+    }
+
+    const headers = parsed[0].map(h => String(h).trim());
+    const headerMap = {};
+
+    headers.forEach((header,index) => {
+      headerMap[normalizeHeader(header)] = index;
+    });
+
+    const idHeader = ["Student ID","ID","StudentID","Admission Number"];
+    const nameHeader = ["Student Name","Name","Full Name","Student"];
+
+    const hasId = idHeader.some(h => headerMap[normalizeHeader(h)] !== undefined);
+    const hasName = nameHeader.some(h => headerMap[normalizeHeader(h)] !== undefined);
+
+    if (!hasId || !hasName) {
+      throw new Error("Required columns not found. Your CSV must contain Student ID and Student Name.");
+    }
+
+    csvRows = parsed.slice(1).map((row,index) => ({
+      id:getCsvColumn(row,headerMap,idHeader),
+      name:getCsvColumn(row,headerMap,nameHeader),
+      student_class:getCsvColumn(row,headerMap,["Class","Student Class"]),
+      phone:getCsvColumn(row,headerMap,["Student Phone","Phone","Phone Number"]),
+      parent_phone:getCsvColumn(row,headerMap,["Parent Phone","ParentPhone","Guardian Phone"]),
+      email:getCsvColumn(row,headerMap,["Email","Email Address"]),
+      interests:getCsvColumn(row,headerMap,["Interests","Interest"]),
+      record_date:getCsvColumn(row,headerMap,["Record Date","Date"]),
+      csvLine:index+2
+    }));
+
+    const idsInFile = new Set();
+    const duplicateIds = new Set();
+
+    csvRows.forEach(row => {
+      if (row.id) {
+        if (idsInFile.has(row.id)) duplicateIds.add(row.id);
+        idsInFile.add(row.id);
+      }
+    });
+
+    const {data:existing,error:existingError} = await db.from("students").select("id");
+    if (existingError) throw existingError;
+
+    const existingIds = new Set((existing || []).map(student => String(student.id)));
+
+    csvValidRows = [];
+    csvInvalidRows = [];
+
+    csvRows.forEach(row => {
+      let problem = "";
+
+      if (!row.id) problem = "Missing Student ID";
+      else if (!row.name) problem = "Missing Student Name";
+      else if (existingIds.has(row.id)) problem = "Student ID already exists";
+      else if (duplicateIds.has(row.id)) problem = "Duplicate ID inside this CSV";
+
+      if (problem) csvInvalidRows.push({...row,problem});
+      else csvValidRows.push(row);
+    });
+
+    drawCsvPreview();
+
+    $("csvStatus").textContent =
+      `File: ${file.name}\n`+
+      `Total records: ${csvRows.length}\n`+
+      `Ready to import: ${csvValidRows.length}\n`+
+      `Skipped due to errors or duplicates: ${csvInvalidRows.length}`;
+
+    $("csvStatus").className =
+      "csv-status " + (csvInvalidRows.length ? "csv-bad" : "csv-good");
+
+    $("importCsvButton").disabled = csvValidRows.length === 0;
+  } catch (error) {
+    $("csvStatus").textContent = "CSV error: " + error.message;
+    $("csvStatus").className = "csv-status csv-bad";
+    $("importCsvButton").disabled = true;
+  }
+}
+
+
+/* CSV PREVIEW */
+
+function drawCsvPreview() {
+  $("csvPreview").classList.remove("hidden");
+
+  $("csvPreviewHead").innerHTML = `
+    <tr>
+      <th>Status</th><th>Student ID</th><th>Name</th><th>Class</th>
+      <th>Phone</th><th>Parent Phone</th><th>Email</th><th>Interests</th>
+    </tr>
+  `;
+
+  const allRows = [
+    ...csvValidRows.map(row => ({...row,status:"Ready",bad:false})),
+    ...csvInvalidRows.map(row => ({...row,status:row.problem,bad:true}))
+  ];
+
+  $("csvPreviewBody").innerHTML = allRows.map(row => `
+    <tr>
+      <td class="${row.bad ? "csv-bad" : "csv-good"}">${escapeHTML(row.status)}</td>
+      <td>${escapeHTML(row.id)}</td>
+      <td>${escapeHTML(row.name)}</td>
+      <td>${escapeHTML(row.student_class)}</td>
+      <td>${escapeHTML(row.phone)}</td>
+      <td>${escapeHTML(row.parent_phone)}</td>
+      <td>${escapeHTML(row.email)}</td>
+      <td>${escapeHTML(row.interests)}</td>
+    </tr>
+  `).join("");
+}
+
+
+/* CSV DATABASE IMPORT */
+
+async function importCsvStudents() {
+  if (!csvValidRows.length) {
+    await atlAlert("There are no valid student records to import.");
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    `Import ${csvValidRows.length} student record(s) into Supabase?\n\n${csvInvalidRows.length} record(s) will be skipped.`,
+    "Confirm CSV import"
+  );
+
+  if (!confirmed) return;
+
+  const button = $("importCsvButton");
+  button.disabled = true;
+  button.textContent = "Importing...";
+
+  try {
+    const records = csvValidRows.map(row => ({
+      id:row.id,
+      name:row.name,
+      student_class:row.student_class || null,
+      phone:row.phone || null,
+      parent_phone:row.parent_phone || null,
+      email:row.email || null,
+      interests:row.interests || null,
+      record_date:row.record_date || null,
+      deleted:false
+    }));
+
+    const {error} = await db.from("students").insert(records);
+    if (error) throw error;
+
+    await logActivity(
+      "CSV IMPORT STUDENTS",
+      `${records.length} student records imported`
+    );
+
+    const importedCount = records.length;
+    const skippedCount = csvInvalidRows.length;
+
+    closeCsvModal();
+    await renderStudents();
+
+    await atlAlert(
+      `${importedCount} student record(s) imported successfully.\n${skippedCount} record(s) skipped because of missing fields or duplicate IDs.`,
+      "CSV import complete",
+      "✓"
+    );
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Import Students";
+
+    await atlAlert(
+      "CSV import failed: " + error.message + "\n\nCheck your database and try again.",
+      "Import failed",
+      "⚠"
+    );
+  }
+}
+
+
+/* CSV DRAG AND DROP */
+
+function setupCsvUpload() {
+  const input = $("csvFile");
+  const chooseButton = $("chooseCsvButton");
+  const dropZone = $("csvDropZone");
+
+  chooseButton.addEventListener("click",selectCsvFile);
+  input.addEventListener("change",handleCsvFile);
+
+  dropZone.addEventListener("dragover",event => {
+    event.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("dragleave",event => {
+    event.preventDefault();
+    dropZone.classList.remove("dragover");
+  });
+
+  dropZone.addEventListener("drop",event => {
+    event.preventDefault();
+    dropZone.classList.remove("dragover");
+
+    const file = event.dataTransfer?.files?.[0];
+    if (!file) return;
+
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+
+    handleCsvFile({target:input});
+  });
+}
+
+
+/* CSV TEMPLATE DOWNLOAD */
+
+function downloadCsvTemplate() {
+  const content = [
+    "Student ID,Student Name,Class,Student Phone,Parent Phone,Email,Interests,Record Date",
+    "ATL-001,Aarav Kumar,Class 6,9876543210,9876543211,aarav@example.com,Robotics Arduino,2026-11-25",
+    "ATL-002,Diya Nair,Class 7,9876543220,9876543221,diya@example.com,Electronics Coding,2026-11-25"
+  ].join("\r\n");
+
+  const blob = new Blob(["\uFEFF"+content],{type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "ATL_Students_Template.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+}
+
+
+/* =========================================================
+   3D PRINTING JOBS
+   Requires public.printing_jobs table (SQL supplied separately).
+========================================================= */
+async function renderPrintingJobs() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Track print requests, material usage, estimated charges and job status.</p></div></div>
+    <div class="printing-summary">
+      <div class="printing-stat"><span class="muted small">Total Jobs</span><strong id="printTotal">—</strong></div>
+      <div class="printing-stat"><span class="muted small">In Progress</span><strong id="printActive">—</strong></div>
+      <div class="printing-stat"><span class="muted small">Completed</span><strong id="printDone">—</strong></div>
+    </div>
+    <div class="panel">
+      <h3>＋ Create print job</h3>
+      <form id="printingJobForm" class="printing-form">
+        <div class="printing-form-grid">
+          <div class="field"><label>Customer / Student name *</label><input id="printCustomer" required maxlength="120" placeholder="Name"></div>
+          <div class="field"><label>Model / Part name *</label><input id="printModel" required maxlength="120" placeholder="Robot chassis"></div>
+          <div class="field"><label>Material</label><select id="printMaterial"><option>PLA</option><option>PETG</option><option>ABS</option><option>TPU</option><option>Resin</option><option>Other</option></select></div>
+          <div class="field"><label>Colour</label><input id="printColor" maxlength="60" placeholder="Black"></div>
+          <div class="field"><label>Estimated weight (grams) *</label><input id="printWeight" type="number" min="0.1" step="0.1" required></div>
+          <div class="field"><label>Rate per gram (₹) *</label><input id="printRate" type="number" min="0" step="0.01" value="5" required></div>
+          <div class="field"><label>Due date</label><input id="printDue" type="date"></div>
+          <div class="field"><label>Print status</label><select id="printStatus"><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
+          <div class="field"><label>Estimated amount (₹)</label><input id="printAmount" readonly value="0.00"></div>
+        </div>
+        <div class="field"><label>Notes</label><textarea id="printNotes" rows="2" maxlength="1000" placeholder="Infill, layer height, special instructions..."></textarea></div>
+        <button class="btn btn-primary" id="savePrintJob" type="submit">Save print job</button>
+        <div id="printError" class="error"></div>
+      </form>
+    </div>
+    <div class="panel"><div class="toolbar"><input id="printSearch" placeholder="Search customer or model..." style="flex:1;min-width:180px;padding:11px;border:1px solid var(--border);border-radius:9px"><button class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Amount</th><th>Due</th><th>Status</th><th>Update</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="9" class="empty">Loading jobs...</td></tr></tbody></table></div>
+    </div>`;
+  const weight = $("printWeight"), rate = $("printRate"), amount = $("printAmount");
+  const calc = () => amount.value = (Math.max(0,Number(weight.value)||0)*Math.max(0,Number(rate.value)||0)).toFixed(2);
+  weight.addEventListener("input",calc); rate.addEventListener("input",calc);
+  $("printingJobForm").addEventListener("submit",savePrintingJob);
+  $("refreshPrintJobs").onclick = renderPrintingJobs;
+  $("printSearch").addEventListener("input",drawPrintingJobs);
+  await loadPrintingJobs();
+}
+
+async function loadPrintingJobs() {
+  const body = $("printingJobsTable");
+  try {
+    const {data,error} = await db.from("printing_jobs").select("*").eq("deleted",false).order("created_at",{ascending:false});
+    if(error) throw error;
+    printingJobsCache = data || [];
+    $("printTotal").textContent = printingJobsCache.length;
+    $("printActive").textContent = printingJobsCache.filter(x=>["Queued","Printing"].includes(x.status)).length;
+    $("printDone").textContent = printingJobsCache.filter(x=>x.status === "Completed").length;
+    drawPrintingJobs();
+  } catch(error) {
+    body.innerHTML = `<tr><td colspan="9" class="empty">${escapeHTML(error.message)}. Check that the printing_jobs SQL table and policies have been created.</td></tr>`;
+  }
+}
+
+function drawPrintingJobs() {
+  const body = $("printingJobsTable");
+  if(!body) return;
+  const term = ($("printSearch")?.value || "").trim().toLowerCase();
+  const rows = printingJobsCache.filter(x=>`${x.job_code||""} ${x.customer_name||""} ${x.model_name||""}`.toLowerCase().includes(term));
+  if(!rows.length){body.innerHTML='<tr><td colspan="9" class="empty">No print jobs found.</td></tr>';return;}
+  body.innerHTML = rows.map(x=>`<tr>
+    <td><strong>${escapeHTML(x.job_code||"—")}</strong></td><td>${escapeHTML(x.customer_name)}</td><td>${escapeHTML(x.model_name)}</td>
+    <td>${escapeHTML([x.material,x.color].filter(Boolean).join(" · "))}</td><td>${Number(x.weight_grams).toFixed(1)} g</td>
+    <td>₹${Number(x.amount||0).toFixed(2)}</td><td>${escapeHTML(x.due_date||"—")}</td>
+    <td><span class="tag">${escapeHTML(x.status)}</span></td>
+    <td><select data-print-status="${x.id}" aria-label="Update status for ${escapeHTML(x.job_code||x.model_name)}"><option ${x.status==="Queued"?"selected":""}>Queued</option><option ${x.status==="Printing"?"selected":""}>Printing</option><option ${x.status==="Completed"?"selected":""}>Completed</option><option ${x.status==="Failed"?"selected":""}>Failed</option><option ${x.status==="Cancelled"?"selected":""}>Cancelled</option></select></td>
+  </tr>`).join("");
+  body.querySelectorAll("[data-print-status]").forEach(el=>el.addEventListener("change",()=>updatePrintingStatus(el.dataset.printStatus,el.value)));
+}
+
+async function savePrintingJob(event) {
+  event.preventDefault();
+  const button=$("savePrintJob"), errorBox=$("printError");
+  button.disabled=true;button.textContent="Saving...";errorBox.textContent="";
+  const weight=Number($("printWeight").value),rate=Number($("printRate").value);
+  try {
+    if(!(weight>0) || !(rate>=0)) throw new Error("Enter a valid weight and rate.");
+    const {error}=await db.from("printing_jobs").insert({
+      customer_name:$("printCustomer").value.trim(),model_name:$("printModel").value.trim(),
+      material:$("printMaterial").value,color:$("printColor").value.trim()||null,
+      weight_grams:weight,rate_per_gram:rate,amount:Number((weight*rate).toFixed(2)),
+      due_date:$("printDue").value||null,status:$("printStatus").value,
+      notes:$("printNotes").value.trim()||null,created_by:currentUser?.id,deleted:false
+    });
+    if(error) throw error;
+    await logActivity("CREATE 3D PRINT JOB",$("printModel").value.trim());
+    $("printingJobForm").reset();$("printRate").value="5";$("printAmount").value="0.00";
+    showToast("3D print job saved.");await loadPrintingJobs();
+  } catch(error){errorBox.textContent=error.message;}
+  finally{button.disabled=false;button.textContent="Save print job";}
+}
+
+async function updatePrintingStatus(id,status) {
+  try {
+    const {error}=await db.from("printing_jobs").update({status}).eq("id",id).eq("deleted",false);
+    if(error) throw error;
+    await logActivity("UPDATE 3D PRINT STATUS",`${id}: ${status}`);
+    showToast("Print status updated.");await loadPrintingJobs();
+  } catch(error){await atlAlert(error.message,"Could not update status","⚠️");await loadPrintingJobs();}
+}
+
+/* =========================================================
+   COMING SOON MODULES
+========================================================= */
+
+function renderComingSoon(page) {
+  const descriptions = {
+    "3D Printing":"Manage 3D printing orders, filament and charges.",
+    "Payments":"Record payments and monitor outstanding balances.",
+    "Reports":"View lab reports and operational summaries.",
+    "Settings":"Manage application settings and system configuration."
+  };
+
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>${escapeHTML(page)}</h1>
+        <p>${escapeHTML(descriptions[page] || "ATL Lab Manager module.")}</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="empty">
+        <div style="font-size:35px;margin-bottom:12px">🚧</div>
+        <h3>Module not implemented yet</h3>
+        <p>This module will be developed and tested in the next steps.</p>
+        <span class="tag">Coming next</span>
+      </div>
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   EVENT LISTENERS
+========================================================= */
+
+$("loginForm").addEventListener("submit",signIn);
+$("logoutButton").addEventListener("click",signOut);
+
+$("studentForm").addEventListener("submit",saveStudent);
+$("closeModal").onclick = closeStudentForm;
+$("cancelModal").onclick = closeStudentForm;
+$("closeView").onclick = () => $("viewModal").classList.add("hidden");
+
+$("closeCsvModal").onclick = closeCsvModal;
+$("cancelCsv").onclick = closeCsvModal;
+$("importCsvButton").onclick = importCsvStudents;
+$("downloadCsvTemplate").onclick = downloadCsvTemplate;
+
+$("closeProjectModal").onclick = closeProjectForm;
+$("cancelProjectModal").onclick = closeProjectForm;
+$("projectForm").addEventListener("submit",saveProject);
+$("closeProjectView").onclick = () => $("projectViewModal").classList.add("hidden");
+
+$("componentForm").addEventListener("submit",saveComponent);
+$("closeComponentModal").onclick = closeComponentForm;
+$("cancelComponentModal").onclick = closeComponentForm;
+
+$("issueForm").addEventListener("submit",saveIssue);
+$("closeIssueModal").onclick = closeIssueForm;
+$("cancelIssueModal").onclick = closeIssueForm;
+$("returnForm").addEventListener("submit",saveReturn);
+$("closeReturnModal").onclick = closeReturnForm;
+$("cancelReturnModal").onclick = closeReturnForm;
+
+$("closeIssueHistoryModal").onclick = () => {
+  $("issueHistoryModal").classList.add("hidden");
+};
+
+$("mobileMenu").onclick = () => {
+  $("sidebar").classList.toggle("open");
+};
+
+setupCsvUpload();
+
+document.querySelectorAll(".nav-btn[data-page]").forEach(button => {
+  button.addEventListener("click",() => navigate(button.dataset.page));
+});
+
+
+/* =========================================================
+   START APPLICATION
+========================================================= */
+
+restoreSession();
+
+// PWA app-shell caching. Supabase login and live records still need internet.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(err => console.warn("PWA service worker:",err)));
+}
+
+</script>
+</body>
+</html>
