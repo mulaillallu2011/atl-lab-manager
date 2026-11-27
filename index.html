@@ -3,12 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<meta name="description" content="ATL Lab Manager - manage students, projects, components and 3D printing jobs.">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ATL Lab Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -160,31 +155,6 @@ td{vertical-align:middle}
   .stat-number{font-size:24px}
   .form-grid{grid-template-columns:1fr}
 }
-
-/* ATL LAB RESPONSIVE UI REFRESH */
-:root{--bg:#f5f7fc;--card:#fff;--text:#172033;--muted:#667085;--primary:#4f46e5;--primary2:#3730a3;--border:#e6eaf2;--sidebar:#101827;--shadow:0 12px 32px rgba(16,24,40,.06)}
-body{background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
-.sidebar{min-height:100dvh;position:sticky;top:0;height:100dvh;overflow-y:auto;box-shadow:8px 0 28px rgba(15,23,42,.08)}
-.brand-icon{background:linear-gradient(135deg,#6366f1,#4338ca);box-shadow:0 8px 20px #4f46e544}
-.nav-btn{min-height:42px;transition:background .15s ease,color .15s ease}
-.nav-btn.active{background:linear-gradient(90deg,#4338ca,#3730a3);box-shadow:inset 3px 0 #a5b4fc}
-.topbar{position:sticky;top:0;z-index:8;box-shadow:0 3px 14px rgba(15,23,42,.035);padding-top:env(safe-area-inset-top)}
-.content{width:100%;padding:30px clamp(14px,3vw,36px)}
-.stat-card,.panel{border-radius:17px;box-shadow:var(--shadow);border-color:#e9edf5}
-.stat-card{transition:transform .18s ease,box-shadow .18s ease}.stat-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(16,24,40,.09)}
-.page-heading h1{letter-spacing:-.035em}.page-heading p{line-height:1.55}
-input,select,textarea{max-width:100%}input:focus,select:focus,textarea:focus{outline:none;border-color:#818cf8!important;box-shadow:0 0 0 3px #6366f11c}
-.table-wrap{border:1px solid var(--border);border-radius:12px}tbody tr:hover{background:#f8faff}
-.modal{box-shadow:0 24px 70px rgba(15,23,42,.22)}
-.printing-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
-.printing-stat{background:#f8faff;border:1px solid var(--border);padding:14px;border-radius:13px}.printing-stat strong{display:block;font-size:23px;margin-top:4px}
-.printing-form{background:#f8faff;border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0}
-.printing-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 14px}
-.printing-form .field{min-width:0}.printing-form input,.printing-form select,.printing-form textarea{width:100%;min-width:0;padding:10px;border:1px solid var(--border);border-radius:9px}
-@media(max-width:900px){.sidebar{position:fixed;left:-270px;top:0;bottom:0;height:100dvh;z-index:30;width:255px;transition:left .22s ease}.sidebar.open{left:0}.main{width:100%;min-width:0}.mobile-menu{display:inline-block}.printing-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.topbar{height:60px;padding-left:12px;padding-right:12px}.topbar-right{gap:8px}#userLabel{display:none}.content{padding:16px 11px}.page-heading{align-items:flex-start}.page-heading h1{font-size:22px}.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stat-card{padding:12px}.stat-number{font-size:22px}.panel{padding:13px;border-radius:13px}.toolbar{align-items:stretch}.form-grid,.printing-form-grid{grid-template-columns:1fr}.printing-summary{grid-template-columns:1fr 1fr}.modal{padding:16px;max-height:94dvh}.modal-actions{flex-wrap:wrap}.modal-actions .btn{flex:1}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-
 </style>
 </head>
 
@@ -558,7 +528,6 @@ let projectStudents = [];
 let editingProjectId = null;
 
 let componentCache = [];
-let printingJobsCache = [];
 let editingComponentId = null;
 let selectedStockComponentId = null;
 
@@ -854,6 +823,12 @@ async function navigate(page) {
     await renderTrash();
   } else if (page === "3D Printing") {
     await renderPrintingJobs();
+  } else if (page === "Payments") {
+    await renderPayments();
+  } else if (page === "Reports") {
+    await renderReports();
+  } else if (page === "Settings") {
+    await renderSettings();
   } else {
     renderComingSoon(page);
   }
@@ -910,8 +885,8 @@ async function renderDashboard() {
     ["Projects","projects","◈",true],
     ["Components","components","▣",true],
     ["Stock Movements","stock_movements","⇄",false],
-    ["3D Printing Orders","print_orders","▤",false],
-    ["Payments","payments","₹",false]
+    ["3D Printing Orders","printing_jobs","▤",false],
+    ["Payments","atl_payments","₹",false]
   ];
 
   try {
@@ -3352,110 +3327,159 @@ function downloadCsvTemplate() {
 }
 
 
+
 /* =========================================================
-   3D PRINTING JOBS
-   Requires public.printing_jobs table (SQL supplied separately).
+   3D PRINTING + PAYMENT MANAGEMENT
+   Requires the companion SQL migration in Supabase.
 ========================================================= */
+
+let printingJobsCache = [];
+let paymentsCache = [];
+let selectedPaymentJob = null;
+
+function money(value) {
+  return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(Number(value)||0);
+}
+
+function paymentState(total,paid) {
+  if (paid <= 0) return "Unpaid";
+  if (paid + 0.001 >= total) return "Fully Paid";
+  return "Advance";
+}
+
+async function getJobPaidMap(jobIds) {
+  if (!jobIds.length) return {};
+  const {data,error} = await db.from("atl_payments").select("printing_job_id,amount")
+    .in("printing_job_id",jobIds).eq("deleted",false);
+  if (error) throw error;
+  const map = {};
+  (data||[]).forEach(row => { map[row.printing_job_id]=(map[row.printing_job_id]||0)+Number(row.amount||0); });
+  return map;
+}
+
 async function renderPrintingJobs() {
   $("pageContent").innerHTML = `
-    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Track print requests, material usage, estimated charges and job status.</p></div></div>
-    <div class="printing-summary">
-      <div class="printing-stat"><span class="muted small">Total Jobs</span><strong id="printTotal">—</strong></div>
-      <div class="printing-stat"><span class="muted small">In Progress</span><strong id="printActive">—</strong></div>
-      <div class="printing-stat"><span class="muted small">Completed</span><strong id="printDone">—</strong></div>
-    </div>
+    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, charges and customer payments.</p></div><button class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
     <div class="panel">
-      <h3>＋ Create print job</h3>
-      <form id="printingJobForm" class="printing-form">
-        <div class="printing-form-grid">
-          <div class="field"><label>Customer / Student name *</label><input id="printCustomer" required maxlength="120" placeholder="Name"></div>
-          <div class="field"><label>Model / Part name *</label><input id="printModel" required maxlength="120" placeholder="Robot chassis"></div>
-          <div class="field"><label>Material</label><select id="printMaterial"><option>PLA</option><option>PETG</option><option>ABS</option><option>TPU</option><option>Resin</option><option>Other</option></select></div>
-          <div class="field"><label>Colour</label><input id="printColor" maxlength="60" placeholder="Black"></div>
-          <div class="field"><label>Estimated weight (grams) *</label><input id="printWeight" type="number" min="0.1" step="0.1" required></div>
-          <div class="field"><label>Rate per gram (₹) *</label><input id="printRate" type="number" min="0" step="0.01" value="5" required></div>
-          <div class="field"><label>Due date</label><input id="printDue" type="date"></div>
-          <div class="field"><label>Print status</label><select id="printStatus"><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
-          <div class="field"><label>Estimated amount (₹)</label><input id="printAmount" readonly value="0.00"></div>
-        </div>
-        <div class="field"><label>Notes</label><textarea id="printNotes" rows="2" maxlength="1000" placeholder="Infill, layer height, special instructions..."></textarea></div>
-        <button class="btn btn-primary" id="savePrintJob" type="submit">Save print job</button>
-        <div id="printError" class="error"></div>
-      </form>
+      <h3>Create print job</h3>
+      <form id="printingJobForm"><div class="form-grid">
+        <div class="field"><label>Customer / Student *</label><input id="pjCustomer" required maxlength="150" placeholder="Customer name"></div>
+        <div class="field"><label>Model / Part name *</label><input id="pjModel" required maxlength="150" placeholder="Part name"></div>
+        <div class="field"><label>Material</label><select id="pjMaterial"><option>PLA</option><option>PETG</option><option>ABS</option><option>TPU</option><option>Resin</option><option>Other</option></select></div>
+        <div class="field"><label>Colour</label><input id="pjColour" placeholder="e.g. Black"></div>
+        <div class="field"><label>Weight (grams) *</label><input id="pjWeight" type="number" min="0.01" step="0.01" required value="1"></div>
+        <div class="field"><label>Rate per gram (₹) *</label><input id="pjRate" type="number" min="0" step="0.01" required value="5"></div>
+        <div class="field"><label>Due date</label><input id="pjDue" type="date"></div>
+        <div class="field"><label>Status</label><select id="pjStatus"><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
+        <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="pjNotes" rows="2"></textarea></div>
+      </div><div class="notice" id="pjEstimate">Estimated total: ₹5.00</div><button class="btn btn-primary" type="submit" id="savePrintingJob">Save print job</button><div id="pjError" class="error"></div></form>
     </div>
-    <div class="panel"><div class="toolbar"><input id="printSearch" placeholder="Search customer or model..." style="flex:1;min-width:180px;padding:11px;border:1px solid var(--border);border-radius:9px"><button class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Amount</th><th>Due</th><th>Status</th><th>Update</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="9" class="empty">Loading jobs...</td></tr></tbody></table></div>
+    <div class="panel"><div class="toolbar"><div class="search"><input id="printingSearch" placeholder="Search customer, job or model..."></div><select id="printingStatusFilter"><option value="">All statuses</option><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
+      <div class="table-wrap"><table><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="11" class="empty">Loading...</td></tr></tbody></table></div>
     </div>`;
-  const weight = $("printWeight"), rate = $("printRate"), amount = $("printAmount");
-  const calc = () => amount.value = (Math.max(0,Number(weight.value)||0)*Math.max(0,Number(rate.value)||0)).toFixed(2);
-  weight.addEventListener("input",calc); rate.addEventListener("input",calc);
-  $("printingJobForm").addEventListener("submit",savePrintingJob);
-  $("refreshPrintJobs").onclick = renderPrintingJobs;
-  $("printSearch").addEventListener("input",drawPrintingJobs);
+  $("refreshPrintJobs").onclick=renderPrintingJobs;
+  const updateEstimate=()=>$("pjEstimate").textContent="Estimated total: "+money(Number($("pjWeight").value||0)*Number($("pjRate").value||0));
+  $("pjWeight").oninput=updateEstimate; $("pjRate").oninput=updateEstimate;
+  $("printingSearch").oninput=drawPrintingJobs; $("printingStatusFilter").onchange=drawPrintingJobs;
+  $("printingJobForm").onsubmit=savePrintingJob;
   await loadPrintingJobs();
 }
 
 async function loadPrintingJobs() {
-  const body = $("printingJobsTable");
-  try {
-    const {data,error} = await db.from("printing_jobs").select("*").eq("deleted",false).order("created_at",{ascending:false});
-    if(error) throw error;
-    printingJobsCache = data || [];
-    $("printTotal").textContent = printingJobsCache.length;
-    $("printActive").textContent = printingJobsCache.filter(x=>["Queued","Printing"].includes(x.status)).length;
-    $("printDone").textContent = printingJobsCache.filter(x=>x.status === "Completed").length;
-    drawPrintingJobs();
-  } catch(error) {
-    body.innerHTML = `<tr><td colspan="9" class="empty">${escapeHTML(error.message)}. Check that the printing_jobs SQL table and policies have been created.</td></tr>`;
-  }
+  const {data,error}=await db.from("printing_jobs").select("*").eq("deleted",false).order("created_at",{ascending:false});
+  if(error){$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Could not load jobs: ${escapeHTML(error.message)}. Check the Supabase SQL migration and RLS policies.</td></tr>`;return;}
+  printingJobsCache=data||[];
+  try { const paid=await getJobPaidMap(printingJobsCache.map(x=>x.id)); printingJobsCache.forEach(x=>x._paid=paid[x.id]||0); }
+  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Payment data error: ${escapeHTML(error.message)}</td></tr>`;return;}
+  drawPrintingJobs();
 }
 
 function drawPrintingJobs() {
-  const body = $("printingJobsTable");
-  if(!body) return;
-  const term = ($("printSearch")?.value || "").trim().toLowerCase();
-  const rows = printingJobsCache.filter(x=>`${x.job_code||""} ${x.customer_name||""} ${x.model_name||""}`.toLowerCase().includes(term));
-  if(!rows.length){body.innerHTML='<tr><td colspan="9" class="empty">No print jobs found.</td></tr>';return;}
-  body.innerHTML = rows.map(x=>`<tr>
-    <td><strong>${escapeHTML(x.job_code||"—")}</strong></td><td>${escapeHTML(x.customer_name)}</td><td>${escapeHTML(x.model_name)}</td>
-    <td>${escapeHTML([x.material,x.color].filter(Boolean).join(" · "))}</td><td>${Number(x.weight_grams).toFixed(1)} g</td>
-    <td>₹${Number(x.amount||0).toFixed(2)}</td><td>${escapeHTML(x.due_date||"—")}</td>
-    <td><span class="tag">${escapeHTML(x.status)}</span></td>
-    <td><select data-print-status="${x.id}" aria-label="Update status for ${escapeHTML(x.job_code||x.model_name)}"><option ${x.status==="Queued"?"selected":""}>Queued</option><option ${x.status==="Printing"?"selected":""}>Printing</option><option ${x.status==="Completed"?"selected":""}>Completed</option><option ${x.status==="Failed"?"selected":""}>Failed</option><option ${x.status==="Cancelled"?"selected":""}>Cancelled</option></select></td>
-  </tr>`).join("");
-  body.querySelectorAll("[data-print-status]").forEach(el=>el.addEventListener("change",()=>updatePrintingStatus(el.dataset.printStatus,el.value)));
+  if(!$("printingJobsTable")) return;
+  const term=($("printingSearch")?.value||"").toLowerCase().trim();
+  const status=$("printingStatusFilter")?.value||"";
+  const rows=printingJobsCache.filter(j=>(!status||j.status===status)&&[j.job_code,j.customer_name,j.model_name,j.material].join(" ").toLowerCase().includes(term));
+  if(!rows.length){$("printingJobsTable").innerHTML='<tr><td colspan="11" class="empty">No printing jobs found.</td></tr>';return;}
+  $("printingJobsTable").innerHTML=rows.map(j=>{
+    const total=Number(j.amount||Number(j.weight_grams||0)*Number(j.rate_per_gram||0));
+    const paid=Number(j._paid||0), balance=Math.max(0,total-paid), state=paymentState(total,paid);
+    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name)}</td><td>${escapeHTML(j.model_name)}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status)}</span></td><td><div class="actions"><button class="btn btn-success" onclick="recordJobPayment('${j.id}')" ${balance<=0?'disabled':''}>Add payment</button><button class="btn btn-outline" onclick="changeJobStatus('${j.id}')">Status</button></div></td></tr>`;
+  }).join("");
 }
 
 async function savePrintingJob(event) {
-  event.preventDefault();
-  const button=$("savePrintJob"), errorBox=$("printError");
-  button.disabled=true;button.textContent="Saving...";errorBox.textContent="";
-  const weight=Number($("printWeight").value),rate=Number($("printRate").value);
+  event.preventDefault(); const button=$("savePrintingJob"); button.disabled=true; button.textContent="Saving...";
   try {
-    if(!(weight>0) || !(rate>=0)) throw new Error("Enter a valid weight and rate.");
-    const {error}=await db.from("printing_jobs").insert({
-      customer_name:$("printCustomer").value.trim(),model_name:$("printModel").value.trim(),
-      material:$("printMaterial").value,color:$("printColor").value.trim()||null,
-      weight_grams:weight,rate_per_gram:rate,amount:Number((weight*rate).toFixed(2)),
-      due_date:$("printDue").value||null,status:$("printStatus").value,
-      notes:$("printNotes").value.trim()||null,created_by:currentUser?.id,deleted:false
-    });
-    if(error) throw error;
-    await logActivity("CREATE 3D PRINT JOB",$("printModel").value.trim());
-    $("printingJobForm").reset();$("printRate").value="5";$("printAmount").value="0.00";
-    showToast("3D print job saved.");await loadPrintingJobs();
-  } catch(error){errorBox.textContent=error.message;}
+    const weight=Number($("pjWeight").value), rate=Number($("pjRate").value), amount=Number((weight*rate).toFixed(2));
+    if(weight<=0||rate<0) throw new Error("Enter a valid weight and rate.");
+    const payload={customer_name:$("pjCustomer").value.trim(),model_name:$("pjModel").value.trim(),material:$("pjMaterial").value,colour:$("pjColour").value.trim(),weight_grams:weight,rate_per_gram:rate,amount,due_date:$("pjDue").value||null,status:$("pjStatus").value,notes:$("pjNotes").value.trim(),created_by:currentUser.id};
+    const {error}=await db.from("printing_jobs").insert(payload); if(error) throw error;
+    $("printingJobForm").reset(); $("pjWeight").value=1; $("pjRate").value=5; $("pjEstimate").textContent="Estimated total: ₹5.00";
+    showToast("Printing job saved."); await loadPrintingJobs();
+  } catch(error){$("pjError").textContent=error.message;}
   finally{button.disabled=false;button.textContent="Save print job";}
 }
 
-async function updatePrintingStatus(id,status) {
-  try {
-    const {error}=await db.from("printing_jobs").update({status}).eq("id",id).eq("deleted",false);
-    if(error) throw error;
-    await logActivity("UPDATE 3D PRINT STATUS",`${id}: ${status}`);
-    showToast("Print status updated.");await loadPrintingJobs();
-  } catch(error){await atlAlert(error.message,"Could not update status","⚠️");await loadPrintingJobs();}
+async function recordJobPayment(jobId) {
+  const job=printingJobsCache.find(x=>String(x.id)===String(jobId)); if(!job)return;
+  const total=Number(job.amount||Number(job.weight_grams||0)*Number(job.rate_per_gram||0));
+  const paid=Number(job._paid||0), balance=Math.max(0,total-paid);
+  const amountText=prompt(`Job ${job.job_code||""}\nTotal: ${money(total)}\nPaid: ${money(paid)}\nBalance: ${money(balance)}\n\nEnter amount received:`);
+  if(amountText===null)return;
+  const amount=Number(amountText); if(!Number.isFinite(amount)||amount<=0||amount>balance){await atlAlert("Enter an amount greater than zero and not more than the remaining balance.","Invalid amount","⚠");return;}
+  const method=prompt("Payment method: enter GPay, Cash or Other","GPay"); if(method===null)return;
+  const normalized=["gpay","cash","other"].find(x=>x.toLowerCase()===method.trim().toLowerCase());
+  if(!normalized){await atlAlert("Choose GPay, Cash or Other.","Invalid method","⚠");return;}
+  const receiver=prompt("Received by:","Lab Admin"); if(receiver===null)return;
+  try { const {error}=await db.from("atl_payments").insert({printing_job_id:job.id,customer_name:job.customer_name,amount:Number(amount.toFixed(2)),payment_method:normalized.toUpperCase()==="GPAY"?"GPay":normalized[0].toUpperCase()+normalized.slice(1),received_by:receiver.trim()||"Lab Admin",payment_date:todayLocal(),created_by:currentUser.id,deleted:false}); if(error)throw error; showToast("Payment recorded."); await loadPrintingJobs(); }
+  catch(error){await atlAlert("Could not save payment: "+error.message,"Payment error","⚠");}
 }
+
+async function changeJobStatus(jobId) {
+  const job=printingJobsCache.find(x=>String(x.id)===String(jobId)); if(!job)return;
+  const status=prompt("Enter status: Queued, Printing, Completed, Failed or Cancelled",job.status||"Queued"); if(status===null)return;
+  const valid=["Queued","Printing","Completed","Failed","Cancelled"];
+  if(!valid.includes(status)){await atlAlert("Please enter one of the listed statuses with the same spelling.");return;}
+  const {error}=await db.from("printing_jobs").update({status}).eq("id",job.id); if(error) await atlAlert(error.message,"Update failed","⚠"); else {showToast("Job status updated.");await loadPrintingJobs();}
+}
+
+/* =========================================================
+   PAYMENTS
+========================================================= */
+async function renderPayments() {
+  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Payments</h1><p>Record lab receipts and monitor outstanding balances.</p></div><button class="btn btn-outline" id="refreshPayments">↻ Refresh</button></div>
+  <div class="cards"><div class="stat-card"><div class="stat-title">Total received</div><div class="stat-number" id="paymentTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Payment records</div><div class="stat-number" id="paymentCount">0</div></div></div>
+  <div class="panel"><h3>Record a payment</h3><form id="generalPaymentForm"><div class="form-grid">
+  <div class="field"><label>Customer / Student *</label><input id="payCustomer" required></div><div class="field"><label>Amount (₹) *</label><input id="payAmount" type="number" min="0.01" step="0.01" required></div>
+  <div class="field"><label>Payment method *</label><select id="payMethod"><option>GPay</option><option>Cash</option><option>Other</option></select></div><div class="field"><label>Received by</label><input id="payReceiver" value="Lab Admin"></div>
+  <div class="field"><label>Payment date *</label><input id="payDate" type="date" required></div><div class="field"><label>Reference / Transaction ID</label><input id="payReference"></div>
+  <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="payNotes" rows="2"></textarea></div></div><button class="btn btn-primary" id="saveGeneralPayment" type="submit">Save payment</button><div id="paymentError" class="error"></div></form></div>
+  <div class="panel"><div class="toolbar"><div class="search"><input id="paymentSearch" placeholder="Search customer, method or reference..."></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Received by</th><th>Reference</th><th>Linked job</th></tr></thead><tbody id="paymentsTable"></tbody></table></div></div>`;
+  $("payDate").value=todayLocal(); $("refreshPayments").onclick=renderPayments; $("paymentSearch").oninput=drawPayments; $("generalPaymentForm").onsubmit=saveGeneralPayment;
+  await loadPayments();
+}
+
+async function loadPayments() {
+  const {data,error}=await db.from("atl_payments").select("*").eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false});
+  if(error){$("paymentsTable").innerHTML=`<tr><td colspan="7" class="empty">Could not load payments: ${escapeHTML(error.message)}. Run the ATL payments SQL migration.</td></tr>`;return;}
+  paymentsCache=data||[]; $("paymentTotal").textContent=money(paymentsCache.reduce((a,p)=>a+Number(p.amount||0),0)); $("paymentCount").textContent=paymentsCache.length; drawPayments();
+}
+
+function drawPayments(){if(!$("paymentsTable"))return;const term=($("paymentSearch")?.value||"").toLowerCase().trim();const rows=paymentsCache.filter(p=>[p.customer_name,p.payment_method,p.received_by,p.reference,p.notes].join(" ").toLowerCase().includes(term));$("paymentsTable").innerHTML=rows.length?rows.map(p=>`<tr><td>${formatDate(p.payment_date)}</td><td>${escapeHTML(p.customer_name||"—")}</td><td><strong>${money(p.amount)}</strong></td><td>${escapeHTML(p.payment_method)}</td><td>${escapeHTML(p.received_by||"Lab Admin")}</td><td>${escapeHTML(p.reference||"—")}</td><td>${p.printing_job_id?"3D Printing":"General"}</td></tr>`).join(""):'<tr><td colspan="7" class="empty">No payment records.</td></tr>';}
+
+async function saveGeneralPayment(event){event.preventDefault();const button=$("saveGeneralPayment");button.disabled=true;try{const amount=Number($("payAmount").value);if(amount<=0)throw new Error("Enter a valid amount.");const {error}=await db.from("atl_payments").insert({customer_name:$("payCustomer").value.trim(),amount:Number(amount.toFixed(2)),payment_method:$("payMethod").value,received_by:$("payReceiver").value.trim()||"Lab Admin",payment_date:$("payDate").value,reference:$("payReference").value.trim()||null,notes:$("payNotes").value.trim()||null,created_by:currentUser.id,deleted:false});if(error)throw error;$("generalPaymentForm").reset();$("payDate").value=todayLocal();$("payReceiver").value="Lab Admin";showToast("Payment saved.");await loadPayments();}catch(error){$("paymentError").textContent=error.message;}finally{button.disabled=false;}}
+
+/* =========================================================
+   BASIC REPORTS AND ADMIN SETTINGS
+========================================================= */
+async function renderReports(){
+  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Reports</h1><p>Live operational and payment summaries.</p></div><button class="btn btn-outline" id="refreshReports">↻ Refresh</button></div><div class="cards" id="reportCards"></div><div class="panel"><h3>Recent payments</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Received by</th></tr></thead><tbody id="reportPayments"></tbody></table></div></div>`;
+  $("refreshReports").onclick=renderReports;
+  try{const [students,projects,components,jobs,payments]=await Promise.all([getCount("students",true),getCount("projects",true),getCount("components",true),getCount("printing_jobs",false),db.from("atl_payments").select("*").eq("deleted",false).order("payment_date",{ascending:false}).limit(10)]);if(payments.error)throw payments.error;const total=(payments.data||[]).reduce((a,p)=>a+Number(p.amount||0),0);const cards=[["Students",students],["Projects",projects],["Components",components],["3D Print Jobs",jobs],["Payments Received",money(total)]];$("reportCards").innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-title">${c[0]}</div><div class="stat-number">${c[1]}</div></div>`).join("");$("reportPayments").innerHTML=(payments.data||[]).map(p=>`<tr><td>${formatDate(p.payment_date)}</td><td>${escapeHTML(p.customer_name||"—")}</td><td>${money(p.amount)}</td><td>${escapeHTML(p.payment_method)}</td><td>${escapeHTML(p.received_by||"Lab Admin")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No payments yet.</td></tr>';}catch(error){$("reportCards").innerHTML=`<div class="notice">Report error: ${escapeHTML(error.message)}</div>`;}
+}
+
+async function renderSettings(){if(!isAdmin()){await atlAlert("Only Admin can access Settings.","Access denied","🔒");return;}$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Settings</h1><p>Administrator information and system status.</p></div></div><div class="panel"><h3>Signed-in administrator</h3><p><strong>Username:</strong> ${escapeHTML(currentProfile?.username||"—")}</p><p><strong>Role:</strong> ${escapeHTML(currentProfile?.role||"—")}</p><p><strong>Email:</strong> ${escapeHTML(currentUser?.email||"—")}</p></div><div class="panel"><h3>Database connection</h3><p class="muted">The application uses Supabase authentication and Row Level Security. Do not disable RLS or expose a service-role key in this HTML file.</p></div>`;}
+
 
 /* =========================================================
    COMING SOON MODULES
@@ -3542,11 +3566,6 @@ document.querySelectorAll(".nav-btn[data-page]").forEach(button => {
 ========================================================= */
 
 restoreSession();
-
-// PWA app-shell caching. Supabase login and live records still need internet.
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(err => console.warn("PWA service worker:",err)));
-}
 
 </script>
 </body>
