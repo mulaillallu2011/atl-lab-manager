@@ -3178,6 +3178,7 @@ function closeReturnForm() {
   selectedReturnIssue = null;
 }
 
+
 async function saveReturn(event) {
   event.preventDefault();
 
@@ -3187,46 +3188,80 @@ async function saveReturn(event) {
   $("returnFormError").textContent = "";
 
   try {
+    // Check selected issue.
     if (!selectedReturnIssue) {
       throw new Error("No issue record selected.");
     }
 
+    // Read form values.
+    const issueId = selectedReturnIssue.id;
     const quantity = Number($("returnQuantity").value);
     const returnDate = $("returnDate").value;
+    const notes = $("returnNotes").value.trim() || null;
+
+    // Calculate outstanding quantity.
     const outstanding = getIssueOutstanding(selectedReturnIssue);
 
+    // Validate quantity.
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      throw new Error("Return quantity must be a whole number greater than zero.");
+      throw new Error(
+        "Return quantity must be a whole number greater than zero."
+      );
     }
 
     if (quantity > outstanding) {
-      throw new Error("You cannot return more than the outstanding quantity: " + outstanding);
+      throw new Error(
+        "You cannot return more than the outstanding quantity: " +
+        outstanding
+      );
     }
 
     if (!returnDate) {
       throw new Error("Return date is required.");
     }
 
-    const issueId = selectedReturnIssue.id;
-    const {data,error} = await db.rpc("atl_return_component_issue",{
-      p_issue_id:issueId,
-      p_quantity:quantity,
-      p_return_date:returnDate,
-      p_notes:$("returnNotes").value.trim() || null
-    });
-
-    if (error) throw error;
-
-    await logActivity(
-      "RETURN COMPONENT",
-      `${selectedReturnIssue.person_name} | ${getIssueComponentName(selectedReturnIssue)} | Quantity: ${quantity}`
+    // Call Supabase RPC.
+    const { data, error } = await db.rpc(
+      "atl_return_component_issue",
+      {
+        p_issue_id: issueId,
+        p_quantity: quantity,
+        p_return_date: returnDate,
+        p_notes: notes
+      }
     );
 
+    if (error) {
+      throw error;
+    }
+
+    if (!data || data.success !== true) {
+      throw new Error("Supabase did not confirm the return.");
+    }
+
+    // Log the activity.
+    await logActivity(
+      "RETURN COMPONENT",
+      `${selectedReturnIssue.person_name} | ` +
+      `${getIssueComponentName(selectedReturnIssue)} | ` +
+      `Quantity: ${quantity}`
+    );
+
+    // Close modal and refresh.
     closeReturnForm();
-    showToast("Return saved. Stock has been updated.");
+
+    showToast(
+      `Return saved successfully. ${quantity} unit(s) added to available stock.`
+    );
+
     await renderIssues();
+
   } catch (error) {
-    $("returnFormError").textContent = error.message;
+    console.error("Component return error:", error);
+
+    $("returnFormError").textContent =
+      error.message || "Could not save component return.";
+
   } finally {
     button.disabled = false;
     button.textContent = "Save Return";
@@ -4106,12 +4141,21 @@ function money(value){return "₹"+Number(value||0).toLocaleString("en-IN",{mini
 function studentPaidTotal(id){return paymentsCache.filter(p=>p.student_id===id && p.payment_type==="Student Fee").reduce((a,p)=>a+Number(p.amount||0),0);}
 function jobPaidTotal(id){return paymentsCache.filter(p=>p.printing_job_id===id).reduce((a,p)=>a+Number(p.amount||0),0);}
 async function renderPayments(){
-  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Payments</h1><p>All receipts, advance payments and outstanding balances.</p></div><button type="button" class="btn btn-outline" id="refreshPayments">↻ Refresh</button></div>
+  $("pageContent").innerHTML=`<div class="page-heading"><div><h1>Payments</h1><p>All receipts, advance payments and outstanding balances.</p></div><button type="button" class="btn btn-outline" id="paymentTrashButton">🗑 View Trash</button>
+<button type="button" class="btn btn-outline" id="refreshPayments">↻ Refresh</button></div>
   <div class="cards"><div class="stat-card"><div class="stat-title">Total received</div><div class="stat-number" id="paymentTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Student fee balance</div><div class="stat-number" id="studentBalanceTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Printing balance</div><div class="stat-number" id="printingBalanceTotal">₹0</div></div><div class="stat-card"><div class="stat-title">Payment records</div><div class="stat-number" id="paymentCount">0</div></div></div>
   <div class="panel"><h3>Record a payment</h3><form id="generalPaymentForm"><div class="form-grid"><div class="field"><label>Category *</label><select id="payType"><option>Student Fee</option><option>3D Printing</option><option>General</option></select></div><div class="field" id="payStudentWrap"><label>Student *</label><select id="payStudent"><option value="">Select student</option></select></div><div class="field hidden" id="payJobWrap"><label>Printing job *</label><select id="payJob"><option value="">Select job</option></select></div><div class="field"><label>Customer / Student *</label><input id="payCustomer" required></div><div class="field"><label>Amount (₹) *</label><input id="payAmount" type="number" min="0.01" step="0.01" required></div><div class="field"><label>Method *</label><select id="payMethod"><option>GPay</option><option>Cash</option><option>Other</option></select></div><div class="field"><label>Received by</label><input id="payReceiver" value="Lab Admin"></div><div class="field"><label>Date *</label><input id="payDate" type="date" required></div><div class="field"><label>Reference / Transaction ID</label><input id="payReference"></div><div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="payNotes" rows="2"></textarea></div></div><div class="notice" id="paymentContext">Select a student or printing job to see the balance.</div><button class="btn btn-primary" id="saveGeneralPayment" type="submit">Save payment</button><div id="paymentError" class="error"></div></form></div>
   <div class="panel"><div class="toolbar"><h3 style="margin:0">Student fee balances</h3><div class="search"><input id="feeSearch" placeholder="Search student, class or batch..."></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Class</th><th>Batch</th><th>Total fee</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="studentFeeTable"></tbody></table></div></div>
-  <div class="panel"><div class="toolbar"><h3 style="margin:0">All payment history</h3><div class="search"><input id="paymentSearch" placeholder="Search customer, method or reference..."></div><select id="paymentFilter"><option>All</option><option>Student Fee</option><option>3D Printing</option><option>General</option></select></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Category</th><th>Amount</th><th>Method</th><th>Received by</th><th>Reference</th><th>Status</th></tr></thead><tbody id="paymentsTable"></tbody></table></div></div>`;
-  $("payDate").value=todayLocal(); $("refreshPayments").onclick=renderPayments; $("generalPaymentForm").onsubmit=saveGeneralPayment; $("payType").onchange=updatePaymentCategory; $("payStudent").onchange=updatePaymentContext; $("payJob").onchange=updatePaymentContext; $("paymentSearch").oninput=drawPayments; $("paymentFilter").onchange=drawPayments; $("feeSearch").oninput=drawStudentFeeBalances; await loadPayments();
+  <div class="panel"><div class="toolbar"><h3 style="margin:0">All payment history</h3><div class="search"><input id="paymentSearch" placeholder="Search customer, method or reference..."></div><select id="paymentFilter"><option>All</option><option>Student Fee</option><option>3D Printing</option><option>General</option></select></div><div class="table-wrap"><table><thead><tr><th>Date</th>
+<th>Customer</th>
+<th>Category</th>
+<th>Amount</th>
+<th>Method</th>
+<th>Received by</th>
+<th>Reference</th>
+<th>Status</th>
+<th>Actions</th></tr></thead><tbody id="paymentsTable"></tbody></table></div></div>`;
+  $("payDate").value=todayLocal(); $("refreshPayments").onclick=renderPayments; $("paymentTrashButton").onclick=renderPaymentTrash; $("generalPaymentForm").onsubmit=saveGeneralPayment; $("payType").onchange=updatePaymentCategory; $("payStudent").onchange=updatePaymentContext; $("payJob").onchange=updatePaymentContext; $("paymentSearch").oninput=drawPayments; $("paymentFilter").onchange=drawPayments; $("feeSearch").oninput=drawStudentFeeBalances; await loadPayments();
 }
 async function loadPayments(){
  let p,s,j;try{[p,s,j]=await Promise.all([fetchAllRows("atl_payments","*",q=>q.eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false})),fetchAllRows("students","id,name,student_class,batch_name,fee_total",q=>q.eq("deleted",false).order("name")),fetchAllRows("printing_jobs","id,job_code,customer_name,model_name,amount",q=>q.eq("deleted",false))]);}catch(error){$("paymentsTable").innerHTML=`<tr><td colspan="8" class="empty">${escapeHTML(error.message)}</td></tr>`;return;}
@@ -4124,9 +4168,388 @@ async function loadPayments(){
 }
 function updatePaymentCategory(){const t=$("payType").value;$("payStudentWrap").classList.toggle("hidden",t!=="Student Fee");$("payJobWrap").classList.toggle("hidden",t!=="3D Printing");$("payStudent").required=t==="Student Fee";$("payJob").required=t==="3D Printing";$("payCustomer").readOnly=t!=="General";if(t==="General")$("payCustomer").value="";updatePaymentContext();}
 function updatePaymentContext(){const t=$("payType").value;if(t==="Student Fee"){const x=paymentStudents.find(a=>a.id===$("payStudent").value);if(!x){$("paymentContext").textContent="Select a student to view fee details.";return;}const paid=studentPaidTotal(x.id),fee=Number(x.fee_total||0);$("payCustomer").value=x.name;$("paymentContext").textContent=`Fee ${money(fee)} · Paid ${money(paid)} · Balance ${money(Math.max(fee-paid,0))} · Batch ${x.batch_name||"Not assigned"}`;}else if(t==="3D Printing"){const x=paymentJobs.find(a=>a.id===$("payJob").value);if(!x){$("paymentContext").textContent="Select a job to view payment details.";return;}const paid=jobPaidTotal(x.id),total=Number(x.amount||0);$("payCustomer").value=x.customer_name;$("paymentContext").textContent=`Total ${money(total)} · Paid ${money(paid)} · Balance ${money(Math.max(total-paid,0))}`;}else $("paymentContext").textContent="General receipt — not linked to a student or printing job.";}
-function drawStudentFeeBalances(){const term=($("feeSearch")?.value||"").toLowerCase();const rows=paymentStudents.filter(x=>[x.name,x.id,x.student_class,x.batch_name].join(" ").toLowerCase().includes(term));$("studentFeeTable").innerHTML=rows.map(x=>{const fee=Number(x.fee_total||0),paid=studentPaidTotal(x.id),bal=Math.max(fee-paid,0),status=fee===0?"Fee not set":bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";return `<tr><td>${escapeHTML(x.name)}<div class="small muted">${escapeHTML(x.id)}</div></td><td>${escapeHTML(x.student_class||"—")}</td><td>${escapeHTML(x.batch_name||"—")}</td><td>${money(fee)}</td><td>${money(paid)}</td><td><strong>${money(bal)}</strong></td><td><span class="tag">${status}</span></td></tr>`;}).join("")||'<tr><td colspan="7" class="empty">No students found.</td></tr>';}
-function drawPayments(){const term=($("paymentSearch")?.value||"").toLowerCase(),filter=$("paymentFilter")?.value||"All";const rows=paymentsCache.filter(x=>(filter==="All"||(x.payment_type||(x.printing_job_id?"3D Printing":"General"))===filter)&&[x.customer_name,x.payment_method,x.received_by,x.reference,x.notes,x.payment_type].join(" ").toLowerCase().includes(term));$("paymentsTable").innerHTML=rows.map(x=>{let status="Received";if(x.student_id){const st=paymentStudents.find(z=>String(z.id)===String(x.student_id));if(st){const fee=Number(st.fee_total||0),paid=studentPaidTotal(st.id),bal=Math.max(0,fee-paid);status=fee===0?"Fee not set":bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";}else status="Student payment";}else if(x.printing_job_id){const job=paymentJobs.find(z=>String(z.id)===String(x.printing_job_id));if(job){const total=Number(job.amount||0),paid=jobPaidTotal(job.id),bal=Math.max(0,total-paid);status=bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";}else status="Printing payment";}return `<tr><td>${formatDate(x.payment_date)}</td><td>${escapeHTML(x.customer_name||"—")}</td><td>${escapeHTML(x.payment_type||(x.printing_job_id?"3D Printing":"General"))}</td><td><strong>${money(x.amount)}</strong></td><td>${escapeHTML(x.payment_method)}</td><td>${escapeHTML(x.received_by||"Lab Admin")}</td><td>${escapeHTML(x.reference||"—")}</td><td><span class="tag">${status}</span></td></tr>`;}).join("")||'<tr><td colspan="8" class="empty">No payment records found.</td></tr>'; }
-async function saveGeneralPayment(e){e.preventDefault();const b=$("saveGeneralPayment");b.disabled=true;try{const t=$("payType").value,a=Number($("payAmount").value);if(!Number.isFinite(a)||a<=0||a>9999999999)throw Error("Enter a valid amount greater than zero and within the supported limit.");if(!$("payDate").value)throw Error("Payment date is required.");if(!["GPay","Cash","Other"].includes($("payMethod").value))throw Error("Choose a valid payment method.");const data={p_payment_type:t,p_customer_name:$("payCustomer").value.trim(),p_amount:Number(a.toFixed(2)),p_payment_method:$("payMethod").value,p_received_by:$("payReceiver").value.trim()||"Lab Admin",p_payment_date:$("payDate").value,p_reference:$("payReference").value.trim()||null,p_notes:$("payNotes").value.trim()||null,p_student_id:null,p_printing_job_id:null};if(t==="Student Fee"){const x=paymentStudents.find(z=>String(z.id)===String($("payStudent").value));if(!x)throw Error("Select a student.");data.p_student_id=String(x.id);data.p_customer_name=x.name;}if(t==="3D Printing"){const x=paymentJobs.find(z=>String(z.id)===String($("payJob").value));if(!x)throw Error("Select a printing job.");data.p_printing_job_id=x.id;data.p_customer_name=x.customer_name;}const {error}=await db.rpc("atl_record_payment",data);if(error)throw error;$("generalPaymentForm").reset();$("payDate").value=todayLocal();$("payReceiver").value="Lab Admin";showToast("Payment saved.");await loadPayments();}catch(err){$("paymentError").textContent=err.message;}finally{b.disabled=false;}}
+function drawStudentFeeBalances(){
+  const term=($("feeSearch")?.value||"").toLowerCase();
+  const rows=paymentStudents.filter(x=>
+    [x.name,x.id,x.student_class,x.batch_name].join(" ").toLowerCase().includes(term)
+  );
+  $("studentFeeTable").innerHTML=rows.map(x=>{
+    const fee=Number(x.fee_total||0);
+    const paid=studentPaidTotal(x.id);
+    const bal=Math.max(fee-paid,0);
+    const status=fee===0?"Fee not set":bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";
+    return `<tr>
+      <td>${escapeHTML(x.name)}<div class="small muted">${escapeHTML(x.id)}</div></td>
+      <td>${escapeHTML(x.student_class||"—")}</td>
+      <td>${escapeHTML(x.batch_name||"—")}</td>
+      <td>${money(fee)}</td>
+      <td>${money(paid)}</td>
+      <td><strong>${money(bal)}</strong></td>
+      <td><span class="tag">${status}</span></td>
+    </tr>`;
+  }).join("")||'<tr><td colspan="7" class="empty">No students found.</td></tr>';
+}
+
+function drawPayments(){
+  const term=($("paymentSearch")?.value||"").toLowerCase();
+  const filter=$("paymentFilter")?.value||"All";
+  const rows=paymentsCache.filter(x=>
+    (filter==="All"||(x.payment_type||(x.printing_job_id?"3D Printing":"General"))===filter) &&
+    [x.customer_name,x.payment_method,x.received_by,x.reference,x.notes,x.payment_type]
+      .join(" ").toLowerCase().includes(term)
+  );
+
+  $("paymentsTable").innerHTML=rows.map(x=>{
+    let status="Received";
+    if(x.student_id){
+      const st=paymentStudents.find(z=>String(z.id)===String(x.student_id));
+      if(st){
+        const fee=Number(st.fee_total||0);
+        const paid=studentPaidTotal(st.id);
+        const bal=Math.max(0,fee-paid);
+        status=fee===0?"Fee not set":bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";
+      } else status="Student payment";
+    } else if(x.printing_job_id){
+      const job=paymentJobs.find(z=>String(z.id)===String(x.printing_job_id));
+      if(job){
+        const total=Number(job.amount||0);
+        const paid=jobPaidTotal(job.id);
+        const bal=Math.max(0,total-paid);
+        status=bal===0?"Fully paid":paid>0?"Advance / Partial":"Unpaid";
+      } else status="Printing payment";
+    }
+
+    return `<tr>
+      <td>${formatDate(x.payment_date)}</td>
+      <td>${escapeHTML(x.customer_name||"—")}</td>
+      <td>${escapeHTML(x.payment_type||(x.printing_job_id?"3D Printing":"General"))}</td>
+      <td><strong>${money(x.amount)}</strong></td>
+      <td>${escapeHTML(x.payment_method||"—")}</td>
+      <td>${escapeHTML(x.received_by||"Lab Admin")}</td>
+      <td>${escapeHTML(x.reference||"—")}</td>
+      <td><span class="tag">${escapeHTML(status)}</span></td>
+      <td>
+        <button type="button" class="btn btn-danger"
+          data-payment-delete="${escapeHTML(x.id)}">🗑 Trash</button>
+      </td>
+    </tr>`;
+  }).join("")||'<tr><td colspan="9" class="empty">No payment records found.</td></tr>';
+
+  $("paymentsTable").querySelectorAll("[data-payment-delete]").forEach(button=>{
+    button.onclick=()=>movePaymentToTrash(button.dataset.paymentDelete);
+  });
+}
+
+async function saveGeneralPayment(e){
+  e.preventDefault();
+  const b=$("saveGeneralPayment");
+  b.disabled=true;
+  try{
+    const t=$("payType").value;
+    const a=Number($("payAmount").value);
+
+    if(!Number.isFinite(a)||a<=0||a>9999999999)
+      throw Error("Enter a valid amount greater than zero and within the supported limit.");
+    if(!$("payDate").value) throw Error("Payment date is required.");
+    if(!["GPay","Cash","Other"].includes($("payMethod").value))
+      throw Error("Choose a valid payment method.");
+
+    const data={
+      p_payment_type:t,
+      p_customer_name:$("payCustomer").value.trim(),
+      p_amount:Number(a.toFixed(2)),
+      p_payment_method:$("payMethod").value,
+      p_received_by:$("payReceiver").value.trim()||"Lab Admin",
+      p_payment_date:$("payDate").value,
+      p_reference:$("payReference").value.trim()||null,
+      p_notes:$("payNotes").value.trim()||null,
+      p_student_id:null,
+      p_printing_job_id:null
+    };
+
+    if(t==="Student Fee"){
+      const x=paymentStudents.find(z=>String(z.id)===String($("payStudent").value));
+      if(!x) throw Error("Select a student.");
+      data.p_student_id=String(x.id);
+      data.p_customer_name=x.name;
+    }
+
+    if(t==="3D Printing"){
+      const x=paymentJobs.find(z=>String(z.id)===String($("payJob").value));
+      if(!x) throw Error("Select a printing job.");
+      data.p_printing_job_id=x.id;
+      data.p_customer_name=x.customer_name;
+    }
+
+    const {error}=await db.rpc("atl_record_payment",data);
+    if(error) throw error;
+
+    $("generalPaymentForm").reset();
+    $("payDate").value=todayLocal();
+    $("payReceiver").value="Lab Admin";
+    showToast("Payment saved.");
+    await loadPayments();
+
+  }catch(err){
+    $("paymentError").textContent=err.message;
+  }finally{
+    b.disabled=false;
+  }
+}
+
+/* =========================================================
+   PAYMENTS — SOFT DELETE, RESTORE AND ADMIN PERMANENT DELETE
+========================================================= */
+
+async function movePaymentToTrash(paymentId) {
+  const payment = paymentsCache.find(
+    p => String(p.id) === String(paymentId)
+  );
+
+  if (!payment) {
+    await atlAlert("Payment record not found.");
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    `Move payment of ${money(payment.amount)} from ${payment.customer_name} to Trash? This will exclude it from active payment totals.`,
+    "Move payment to Trash",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await db
+      .from("atl_payments")
+      .update({
+        deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: currentUser.id
+      })
+      .eq("id", paymentId)
+      .eq("deleted", false);
+
+    if (error) throw error;
+
+    await logActivity(
+      "MOVE PAYMENT TO TRASH",
+      `${payment.customer_name} | ${money(payment.amount)} | ${paymentId}`
+    );
+
+    showToast("Payment moved to Trash.");
+
+    await loadPayments();
+
+  } catch (error) {
+    await atlAlert(
+      "Could not move payment to Trash: " + error.message,
+      "Payment deletion failed",
+      "⚠"
+    );
+  }
+}
+
+
+async function renderPaymentTrash() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div>
+        <h1>Payments Trash</h1>
+        <p>Restore payment records or permanently delete them.</p>
+      </div>
+      <button class="btn btn-outline" id="backToPayments">
+        ← Back to Payments
+      </button>
+    </div>
+
+    <div class="panel">
+      <div class="notice">
+        Deleted payments are excluded from active payment totals.
+        Only Admin can permanently delete payment records.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Deleted At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="paymentTrashTable">
+            <tr>
+              <td colspan="7" class="empty">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  $("backToPayments").onclick = renderPayments;
+
+  try {
+    const rows = await fetchAllRows(
+      "atl_payments",
+      "*",
+      q => q
+        .eq("deleted", true)
+        .order("deleted_at", { ascending: false })
+    );
+
+    if (!rows.length) {
+      $("paymentTrashTable").innerHTML = `
+        <tr>
+          <td colspan="7" class="empty">
+            Payment Trash is empty.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    $("paymentTrashTable").innerHTML = rows.map(p => `
+      <tr>
+        <td>${formatDate(p.payment_date)}</td>
+        <td>${escapeHTML(p.customer_name || "—")}</td>
+        <td>${escapeHTML(p.payment_type || "General")}</td>
+        <td><strong>${money(p.amount)}</strong></td>
+        <td>${escapeHTML(p.payment_method || "—")}</td>
+        <td>${formatDate(p.deleted_at)}</td>
+        <td>
+          <div class="actions">
+            <button
+              class="btn btn-success"
+              data-payment-restore="${escapeHTML(p.id)}">
+              Restore
+            </button>
+
+            ${isAdmin() ? `
+              <button
+                class="btn btn-danger"
+                data-payment-permanent="${escapeHTML(p.id)}">
+                Delete permanently
+              </button>
+            ` : ""}
+          </div>
+        </td>
+      </tr>
+    `).join("");
+
+    $("paymentTrashTable")
+      .querySelectorAll("[data-payment-restore]")
+      .forEach(button => {
+        button.onclick = () =>
+          restorePayment(button.dataset.paymentRestore);
+      });
+
+    $("paymentTrashTable")
+      .querySelectorAll("[data-payment-permanent]")
+      .forEach(button => {
+        button.onclick = () =>
+          permanentlyDeletePayment(button.dataset.paymentPermanent);
+      });
+
+  } catch (error) {
+    $("paymentTrashTable").innerHTML = `
+      <tr>
+        <td colspan="7" class="empty">
+          Could not load payment Trash:
+          ${escapeHTML(error.message)}
+        </td>
+      </tr>
+    `;
+  }
+}
+
+
+async function restorePayment(paymentId) {
+  const confirmed = await atlConfirm(
+    "Restore this payment? It will be included in active payment totals again.",
+    "Restore payment"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await db
+      .from("atl_payments")
+      .update({
+        deleted: false,
+        deleted_at: null,
+        deleted_by: null
+      })
+      .eq("id", paymentId)
+      .eq("deleted", true);
+
+    if (error) throw error;
+
+    await logActivity("RESTORE PAYMENT", paymentId);
+
+    showToast("Payment restored.");
+
+    await renderPaymentTrash();
+
+  } catch (error) {
+    await atlAlert(
+      "Could not restore payment: " + error.message,
+      "Restore failed",
+      "⚠"
+    );
+  }
+}
+
+
+async function permanentlyDeletePayment(paymentId) {
+  if (!isAdmin()) {
+    await atlAlert(
+      "Only Admin can permanently delete payment records.",
+      "Access denied",
+      "🔒"
+    );
+    return;
+  }
+
+  const confirmed = await atlConfirm(
+    "Permanently delete this payment? This cannot be undone. The payment record will be removed from the database.",
+    "Permanent payment deletion",
+    true
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await db
+      .from("atl_payments")
+      .delete()
+      .eq("id", paymentId)
+      .eq("deleted", true);
+
+    if (error) throw error;
+
+    await logActivity(
+      "PERMANENTLY DELETE PAYMENT",
+      paymentId
+    );
+
+    showToast("Payment permanently deleted.");
+
+    await renderPaymentTrash();
+
+  } catch (error) {
+    await atlAlert(
+      "Permanent deletion failed: " + error.message,
+      "Deletion failed",
+      "⚠"
+    );
+  }
+}
 
 /* =========================================================
    YEAR-END ARCHIVE / CLEANUP - ADMIN ONLY
