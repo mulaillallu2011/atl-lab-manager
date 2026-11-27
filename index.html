@@ -4,6 +4,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111827">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ATL Lab Manager">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <title>ATL Lab Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -218,6 +226,7 @@ td{vertical-align:middle}
         <strong id="topTitle">Dashboard</strong>
       </div>
       <div class="topbar-right">
+        <button class="btn btn-outline hidden" id="installAppButton" type="button">＋ Install App</button>
         <span class="role-pill" id="roleLabel">User</span>
         <span id="userLabel" class="small muted"></span>
       </div>
@@ -1219,6 +1228,7 @@ async function renderTrash() {
         <button class="btn btn-outline" id="projectTrashTab">Projects Trash</button>
         <button class="btn btn-outline" id="componentTrashTab">Components Trash</button>
         <button class="btn btn-outline" id="issueTrashTab">Issue Records Trash</button>
+        <button class="btn btn-outline" id="printingTrashTab">3D Printing Trash</button>
       </div>
       <div class="notice">
         Choose a section to manage deleted records. Only Admin can permanently delete records.
@@ -1245,6 +1255,7 @@ async function renderTrash() {
   $("projectTrashTab").onclick = renderProjectTrash;
   $("componentTrashTab").onclick = renderComponentTrash;
   $("issueTrashTab").onclick = renderIssueTrash;
+  $("printingTrashTab").onclick = renderPrintingTrash;
 
   try {
     const rows = await fetchStudents(true);
@@ -3403,7 +3414,7 @@ function drawPrintingJobs() {
   $("printingJobsTable").innerHTML=rows.map(j=>{
     const total=Number(j.amount||Number(j.weight_grams||0)*Number(j.rate_per_gram||0));
     const paid=Number(j._paid||0), balance=Math.max(0,total-paid), state=paymentState(total,paid);
-    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name)}</td><td>${escapeHTML(j.model_name)}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status)}</span></td><td><div class="actions"><button class="btn btn-success" onclick="recordJobPayment('${j.id}')" ${balance<=0?'disabled':''}>Add payment</button><button class="btn btn-outline" onclick="changeJobStatus('${j.id}')">Status</button></div></td></tr>`;
+    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name)}</td><td>${escapeHTML(j.model_name)}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status)}</span></td><td><div class="actions"><button class="btn btn-success" onclick="recordJobPayment('${j.id}')" ${balance<=0?'disabled':''}>Add payment</button><button class="btn btn-outline" onclick="changeJobStatus('${j.id}')">Status</button><button class="btn btn-danger" onclick="deletePrintingJob('${j.id}')">Delete</button></div></td></tr>`;
   }).join("");
 }
 
@@ -3441,6 +3452,108 @@ async function changeJobStatus(jobId) {
   const valid=["Queued","Printing","Completed","Failed","Cancelled"];
   if(!valid.includes(status)){await atlAlert("Please enter one of the listed statuses with the same spelling.");return;}
   const {error}=await db.from("printing_jobs").update({status}).eq("id",job.id); if(error) await atlAlert(error.message,"Update failed","⚠"); else {showToast("Job status updated.");await loadPrintingJobs();}
+}
+
+async function deletePrintingJob(jobId) {
+  const job = printingJobsCache.find(row => String(row.id) === String(jobId));
+  if (!job) return;
+  const confirmed = await atlConfirm(
+    `Move printing job ${job.job_code || job.id} for ${job.customer_name} to Trash? Its payment records will be kept.`,
+    "Move printing job to Trash",
+    true
+  );
+  if (!confirmed) return;
+  try {
+    const { error } = await db.from("printing_jobs").update({
+      deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: currentUser.id
+    }).eq("id", job.id).eq("deleted", false);
+    if (error) throw error;
+    await logActivity("MOVE PRINTING JOB TO TRASH", `${job.job_code || job.id} - ${job.customer_name}`);
+    showToast("Printing job moved to Trash. Payment records were kept.");
+    await loadPrintingJobs();
+  } catch (error) {
+    await atlAlert("Could not move printing job to Trash: " + error.message, "Delete failed", "⚠");
+  }
+}
+
+async function renderPrintingTrash() {
+  $("pageContent").innerHTML = `
+    <div class="page-heading">
+      <div><h1>3D Printing Trash</h1><p>Restore deleted print jobs or permanently delete them.</p></div>
+      <button class="btn btn-outline" id="backToPrintingJobs">← Active Printing Jobs</button>
+    </div>
+    <div class="panel">
+      <div class="notice">Deleted printing jobs are kept here. Restoring is available to signed-in users. Only Admin can permanently delete a job. Related payment records are preserved.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Amount</th><th>Deleted At</th><th>Actions</th></tr></thead>
+        <tbody id="printingTrashTable"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+      </table></div>
+    </div>`;
+  $("backToPrintingJobs").onclick = renderPrintingJobs;
+  try {
+    const { data, error } = await db.from("printing_jobs").select("*").eq("deleted", true).order("deleted_at", { ascending: false });
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length) {
+      $("printingTrashTable").innerHTML = '<tr><td colspan="7" class="empty">3D Printing Trash is empty.</td></tr>';
+      return;
+    }
+    $("printingTrashTable").innerHTML = rows.map(job => `
+      <tr><td><strong>${escapeHTML(job.job_code || String(job.id).slice(0,8))}</strong></td>
+      <td>${escapeHTML(job.customer_name || "—")}</td><td>${escapeHTML(job.model_name || "—")}</td>
+      <td>${escapeHTML(job.material || "—")}</td><td>${money(job.amount)}</td>
+      <td>${escapeHTML(formatDate(job.deleted_at))}</td><td><div class="actions">
+      <button class="btn btn-success" data-print-restore="${escapeHTML(job.id)}">Restore</button>
+      ${isAdmin() ? `<button class="btn btn-danger" data-print-permanent="${escapeHTML(job.id)}">Delete permanently</button>` : ""}
+      </div></td></tr>`).join("");
+    $("printingTrashTable").querySelectorAll("[data-print-restore]").forEach(button => {
+      button.onclick = () => restorePrintingJob(button.dataset.printRestore);
+    });
+    $("printingTrashTable").querySelectorAll("[data-print-permanent]").forEach(button => {
+      button.onclick = () => permanentlyDeletePrintingJob(button.dataset.printPermanent);
+    });
+  } catch (error) {
+    $("printingTrashTable").innerHTML = `<tr><td colspan="7" class="empty">Could not load printing Trash: ${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+async function restorePrintingJob(jobId) {
+  const confirmed = await atlConfirm("Restore this printing job?", "Restore printing job");
+  if (!confirmed) return;
+  try {
+    const { error } = await db.from("printing_jobs").update({ deleted: false, deleted_at: null, deleted_by: null })
+      .eq("id", jobId).eq("deleted", true);
+    if (error) throw error;
+    await logActivity("RESTORE PRINTING JOB", jobId);
+    showToast("Printing job restored.");
+    await renderPrintingTrash();
+  } catch (error) {
+    await atlAlert("Could not restore printing job: " + error.message, "Restore failed", "⚠");
+  }
+}
+
+async function permanentlyDeletePrintingJob(jobId) {
+  if (!isAdmin()) {
+    await atlAlert("Only Admin can permanently delete printing jobs.", "Access denied", "🔒");
+    return;
+  }
+  const confirmed = await atlConfirm(
+    "Permanently delete this printing job? This cannot be undone. Any linked payment records will remain, but their job link will be cleared.",
+    "Permanent deletion",
+    true
+  );
+  if (!confirmed) return;
+  try {
+    const { error } = await db.from("printing_jobs").delete().eq("id", jobId).eq("deleted", true);
+    if (error) throw error;
+    await logActivity("PERMANENTLY DELETE PRINTING JOB", jobId);
+    showToast("Printing job permanently deleted.");
+    await renderPrintingTrash();
+  } catch (error) {
+    await atlAlert("Permanent deletion failed: " + error.message, "Deletion failed", "⚠");
+  }
 }
 
 /* =========================================================
@@ -3560,6 +3673,40 @@ document.querySelectorAll(".nav-btn[data-page]").forEach(button => {
   button.addEventListener("click",() => navigate(button.dataset.page));
 });
 
+
+/* =========================================================
+   INSTALLABLE APP (PWA)
+========================================================= */
+let atlInstallPrompt = null;
+const atlInstallButton = $("installAppButton");
+window.addEventListener("beforeinstallprompt", event => {
+  event.preventDefault();
+  atlInstallPrompt = event;
+  atlInstallButton?.classList.remove("hidden");
+});
+if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
+  atlInstallButton?.classList.add("hidden");
+}
+atlInstallButton?.addEventListener("click", async () => {
+  if (!atlInstallPrompt) {
+    await atlAlert("To open ATL Lab Manager in its own app window, use Chrome menu ⋮ → Cast, save and share → Install page as app (or Install ATL Lab Manager). Then open it from your desktop or Start menu.", "Install ATL Lab Manager", "ℹ");
+    return;
+  }
+  atlInstallPrompt.prompt();
+  await atlInstallPrompt.userChoice;
+  atlInstallPrompt = null;
+  atlInstallButton.classList.add("hidden");
+});
+window.addEventListener("appinstalled", () => {
+  atlInstallPrompt = null;
+  atlInstallButton?.classList.add("hidden");
+  showToast("ATL Lab Manager installed.");
+});
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(error => console.warn("PWA service worker registration failed:", error));
+  });
+}
 
 /* =========================================================
    START APPLICATION
