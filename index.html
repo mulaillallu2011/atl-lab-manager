@@ -195,7 +195,7 @@ td{vertical-align:middle}
 .printing-create-panel .field label{color:#53627a;font-size:12px;font-weight:700}
 .printing-create-panel .field input,.printing-create-panel .field select,.printing-create-panel .field textarea{border-radius:11px;border-color:#dfe6f1;background:#fff;min-height:43px;transition:border-color .18s,box-shadow .18s}
 .printing-create-panel .field input:focus,.printing-create-panel .field select:focus,.printing-create-panel .field textarea:focus{border-color:#818cf8;box-shadow:0 0 0 4px rgba(99,102,241,.10)}
-#printingJobForm .notice,#pjEstimate{border:1px solid #dfe7ff;background:#f5f7ff;color:#4657a5;border-radius:12px;padding:13px 15px;font-weight:650}
+
 #printingJobForm #savePrintingJob{min-height:42px;padding:0 19px;border-radius:11px;box-shadow:0 5px 12px rgba(79,70,229,.18)}
 .printing-list-heading{justify-content:space-between;align-items:center;margin-bottom:17px}
 .printing-record-label{font-size:10px;font-weight:800;letter-spacing:.09em;color:#6675bb;background:#f0f2ff;border:1px solid #e2e6ff;padding:7px 10px;border-radius:30px;white-space:nowrap}
@@ -739,6 +739,11 @@ hr { border: 0; border-top: 1px solid #e9eef5; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
+
+/* 3D Studio section tabs */
+.printing-studio-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}
+.printing-studio-tabs .btn{min-width:150px}
+@media(max-width:520px){.printing-studio-tabs .btn{flex:1;min-width:130px}}
 </style>
 </head>
 <body>
@@ -3896,106 +3901,268 @@ async function getJobPaidMap(jobIds) {
   return map;
 }
 
-function getPrintDefaultDesignRate(){const n=Number(localStorage.getItem("atl_print_design_hourly_rate"));return Number.isFinite(n)&&n>=0?n:65;}
+/* 3D PRINTING STUDIO PRICING + SEPARATE STUDIO COSTS */
+let printingExpensesCache = [];
+let printingExpensesTotalsCache = [];
+let printingExpensesLoadError = "";
+let printingStudioTab = "jobs";
+let printingCostsTrashMode = false;
+let printPriceManuallyEdited = false;
+
+function getPrintStudioSettings(){
+  const read=(key,fallback)=>{const raw=localStorage.getItem(key);if(raw===null||raw==="")return fallback;const value=Number(raw);return Number.isFinite(value)&&value>=0?value:fallback;};
+  return {
+    ratePerGram:read("atl_print_rate_per_gram",5),
+    designHourlyRate:read("atl_print_design_hourly_rate",65),
+    defaultDesignHours:read("atl_print_default_design_hours",1)
+  };
+}
 function calculatePrintQuote(){
-  const weight=Number($("pjWeight")?.value||0), rate=Number($("pjRate")?.value||0);
-  const hours=Number($("pjDesignHours")?.value||0), hourly=Number($("pjDesignRate")?.value||getPrintDefaultDesignRate());
-  const filament=Number($("pjFilamentCost")?.value||0), maintenance=Number($("pjMaintenanceCost")?.value||0);
-  const design=hours*hourly, print=weight*rate, calculated=print+design;
-  const manualText=$("pjManualPrice")?.value?.trim()||"", manual=manualText===""?null:Number(manualText);
-  const total=manual===null?calculated:manual;
-  return {weight,rate,hours,hourly,filament,maintenance,design,print,calculated,manual,total,expense:filament+maintenance};
+  const settings=getPrintStudioSettings();
+  const weight=Number($("pjWeight")?.value||0);
+  const hours=Number($("pjDesignHours")?.value||0);
+  const rate=settings.ratePerGram;
+  const hourly=settings.designHourlyRate;
+  const print=weight*rate;
+  const design=hours*hourly;
+  const calculated=print+design;
+  const finalText=$("pjFinalPrice")?.value?.trim()||"";
+  const total=finalText===""?calculated:Number(finalText);
+  const manual=printPriceManuallyEdited?total:null;
+  return {weight,hours,rate,hourly,print,design,calculated,total,manual};
 }
-function updatePrintEstimate(){
-  const x=calculatePrintQuote();
-  if($("pjEstimate")) $("pjEstimate").innerHTML=`<strong>Printing charge:</strong> ${money(x.print)} &nbsp; <strong>Design charge:</strong> ${money(x.design)}<br><strong>Calculated price:</strong> ${money(x.calculated)} &nbsp; <strong>Final customer price:</strong> ${money(x.total)}<br><span class="muted">Recorded expenses: Filament ${money(x.filament)} + Maintenance ${money(x.maintenance)} = ${money(x.expense)}</span>`;
+function updatePrintCustomerPrice(force=false){
+  const input=$("pjFinalPrice");
+  if(!input)return;
+  if(force||!printPriceManuallyEdited){
+    const settings=getPrintStudioSettings();
+    const weight=Number($("pjWeight")?.value||0);
+    const hours=Number($("pjDesignHours")?.value||0);
+    const amount=weight*settings.ratePerGram+hours*settings.designHourlyRate;
+    input.value=amount.toFixed(2);
+  }
 }
-async function renderPrintingJobs() {
-  const defaultRate=getPrintDefaultDesignRate();
-  $("pageContent").innerHTML = `
-    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, customer pricing, actual payments and printing expenses.</p></div><button type="button" class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
-    <div class="cards" id="printingFinanceCards">
-      <div class="stat-card"><div class="stat-title">Total printing estimates</div><div class="stat-number" id="printTotalEstimates">₹0.00</div></div>
-      <div class="stat-card"><div class="stat-title">Actually earned (payments)</div><div class="stat-number" id="printTotalEarned">₹0.00</div></div>
-      <div class="stat-card"><div class="stat-title">Filament spent</div><div class="stat-number" id="printFilamentSpent">₹0.00</div></div>
-      <div class="stat-card"><div class="stat-title">Maintenance spent</div><div class="stat-number" id="printMaintenanceSpent">₹0.00</div></div>
-      <div class="stat-card"><div class="stat-title">Total recorded expenses</div><div class="stat-number" id="printTotalExpenses">₹0.00</div></div>
-      <div class="stat-card"><div class="stat-title">Earned minus expenses</div><div class="stat-number" id="printNetResult">₹0.00</div></div>
+function renderPrintingStudioShell(tab="jobs"){
+  printingStudioTab=tab;
+  $("pageContent").innerHTML=`
+    <div class="page-heading"><div><h1>3D Printing Studio</h1><p>Manage print jobs, customer payments, filament purchases and machine maintenance.</p></div></div>
+    <div class="printing-studio-tabs" role="tablist" aria-label="3D Printing Studio sections">
+      <button type="button" class="btn ${tab==="jobs"?"btn-primary":"btn-outline"}" data-print-studio-tab="jobs">Print Jobs</button>
+      <button type="button" class="btn ${tab==="costs"?"btn-primary":"btn-outline"}" data-print-studio-tab="costs">Filament & Maintenance Costs</button>
     </div>
+    <div id="printingStudioContent"></div>`;
+  $("pageContent").querySelectorAll("[data-print-studio-tab]").forEach(button=>{
+    button.onclick=async()=>{
+      const next=button.dataset.printStudioTab;
+      printingStudioTab=next;
+      $("pageContent").querySelectorAll("[data-print-studio-tab]").forEach(b=>b.classList.toggle("btn-primary",b.dataset.printStudioTab===next));
+      $("pageContent").querySelectorAll("[data-print-studio-tab]").forEach(b=>b.classList.toggle("btn-outline",b.dataset.printStudioTab!==next));
+      if(next==="jobs")await renderPrintingJobsView(); else {printingCostsTrashMode=false;await renderPrintingCostsView();}
+    };
+  });
+}
+async function renderPrintingJobs(){
+  renderPrintingStudioShell("jobs");
+  await renderPrintingJobsView();
+}
+async function renderPrintingJobsView(){
+  const content=$("printingStudioContent");
+  if(!content)return;
+  const settings=getPrintStudioSettings();
+  content.innerHTML=`
+    <div class="cards" id="printingFinanceCards">
+      <div class="stat-card"><div class="stat-title">Total print job estimates</div><div class="stat-number" id="printTotalEstimates">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Actually earned (payments)</div><div class="stat-number" id="printTotalEarned">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Filament purchases</div><div class="stat-number" id="printFilamentSpent">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Maintenance spending</div><div class="stat-number" id="printMaintenanceSpent">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Total Studio costs</div><div class="stat-number" id="printTotalExpenses">₹0.00</div></div>
+      <div class="stat-card"><div class="stat-title">Earned minus Studio costs</div><div class="stat-number" id="printNetResult">₹0.00</div></div>
+    </div>
+    <div class="notice hidden" id="printExpenseWarning" role="status"></div>
     <div class="panel printing-create-panel">
-      <div class="printing-section-heading"><span class="printing-heading-icon">＋</span><div><h3>Create print job</h3><p>Calculate the printing price, design charge and job expenses separately</p></div></div>
+      <div class="printing-section-heading"><span class="printing-heading-icon">＋</span><div><h3>Create print job</h3><p>Enter the job details. Pricing defaults are managed in Settings.</p></div></div>
       <form id="printingJobForm"><div class="form-grid">
         <div class="field"><label>Customer / Student *</label><input id="pjCustomer" required maxlength="150" placeholder="Customer name"></div>
         <div class="field"><label>Model / Part name *</label><input id="pjModel" required maxlength="150" placeholder="Part name"></div>
         <div class="field"><label>Material</label><select id="pjMaterial"><option>PLA</option><option>PETG</option><option>ABS</option><option>TPU</option><option>Resin</option><option>Other</option></select></div>
         <div class="field"><label>Colour</label><input id="pjColour" placeholder="e.g. Black"></div>
         <div class="field"><label>Filament weight (grams) *</label><input id="pjWeight" type="number" min="0.01" step="0.01" required value="1"></div>
-        <div class="field"><label>Printing rate per gram (₹) *</label><input id="pjRate" type="number" min="0" step="0.01" required value="5"></div>
-        <div class="field"><label>Design hours</label><input id="pjDesignHours" type="number" min="0" step="0.25" value="1"></div>
-        <div class="field"><label>Design rate per hour (₹)</label><input id="pjDesignRate" type="number" min="0" step="0.01" value="${defaultRate}"></div>
-        <div class="field"><label>Save as default design rate (₹/hour)</label><button type="button" class="btn btn-outline" id="saveDesignRateDefault">Save current hourly rate as default</button><small class="muted">Default is ₹65/hour. You can change it to ₹66 or another amount.</small></div>
-        <div class="field"><label>Custom final price (₹) — optional</label><input id="pjManualPrice" type="number" min="0" step="0.01" placeholder="Leave blank to use calculated price"></div>
-        <div class="field"><label>Filament expense for this job (₹)</label><input id="pjFilamentCost" type="number" min="0" step="0.01" value="0"></div>
-        <div class="field"><label>Maintenance expense for this job (₹)</label><input id="pjMaintenanceCost" type="number" min="0" step="0.01" value="0"></div>
+        <div class="field"><label>Design hours</label><input id="pjDesignHours" type="number" min="0" step="0.25" value="${settings.defaultDesignHours}"></div>
+        <div class="field"><label>Final customer price (₹) *</label><input id="pjFinalPrice" type="number" min="0" step="0.01" required value="0"><small class="muted">Auto-calculated using the rates in Settings. You can edit this price for this job.</small><button type="button" class="btn btn-outline" id="pjUseCalculatedPrice" style="margin-top:8px">↻ Use calculated price</button></div>
         <div class="field"><label>Due date</label><input id="pjDue" type="date"></div>
         <div class="field"><label>Status</label><select id="pjStatus"><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
         <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="pjNotes" rows="2" placeholder="Optional details"></textarea></div>
-      </div><div class="notice" id="pjEstimate">Calculated price: ₹70.00</div><button class="btn btn-primary" type="submit" id="savePrintingJob">Save print job</button><div id="pjError" class="error"></div></form>
+      </div><button class="btn btn-primary" type="submit" id="savePrintingJob">Save print job</button><div id="pjError" class="error"></div></form>
     </div>
-    <div class="panel printing-jobs-panel"><div class="printing-list-heading"><div><h3>Printing job records</h3><p>Track price, payments, filament and maintenance expenses</p></div><span class="printing-record-label">LIVE RECORDS</span></div><div class="toolbar printing-toolbar"><div class="search"><input id="printingSearch" placeholder="Search customer, job or model..."></div><select id="printingStatusFilter"><option value="">All statuses</option><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select></div>
-      <div class="table-wrap printing-table-wrap"><table class="printing-jobs-table"><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Final price</th><th>Filament cost</th><th>Maintenance</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="13" class="empty">Loading...</td></tr></tbody></table></div>
+    <div class="panel printing-jobs-panel"><div class="printing-list-heading"><div><h3>Printing job records</h3><p>Track job prices, payments and balances. Filament and maintenance expenses are recorded separately.</p></div><button type="button" class="btn btn-outline" id="openPrintingTrash">🗑 Job Trash</button></div><div class="toolbar printing-toolbar"><div class="search"><input id="printingSearch" placeholder="Search customer, job or model..."></div><select id="printingStatusFilter"><option value="">All statuses</option><option>Queued</option><option>Printing</option><option>Completed</option><option>Failed</option><option>Cancelled</option></select><button type="button" class="btn btn-outline" id="refreshPrintJobs">↻ Refresh</button></div>
+      <div class="table-wrap printing-table-wrap"><table class="printing-jobs-table"><thead><tr><th>Job</th><th>Customer</th><th>Model</th><th>Material</th><th>Weight</th><th>Final price</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead><tbody id="printingJobsTable"><tr><td colspan="11" class="empty">Loading...</td></tr></tbody></table></div>
     </div>`;
-  $("refreshPrintJobs").onclick=renderPrintingJobs;
-  ["pjWeight","pjRate","pjDesignHours","pjDesignRate","pjManualPrice","pjFilamentCost","pjMaintenanceCost"].forEach(id=>$(id).addEventListener("input",updatePrintEstimate));
-  $("saveDesignRateDefault").onclick=()=>{const rate=Number($("pjDesignRate").value);if(!Number.isFinite(rate)||rate<0){atlAlert("Enter a valid non-negative hourly rate.");return;}localStorage.setItem("atl_print_design_hourly_rate",String(rate));showToast("Default design hourly rate saved on this browser.");};
-  updatePrintEstimate();
-  $("printingSearch").oninput=drawPrintingJobs; $("printingStatusFilter").onchange=drawPrintingJobs;
+  printPriceManuallyEdited=false;
+  updatePrintCustomerPrice(true);
+  ["pjWeight","pjDesignHours"].forEach(id=>$(id).addEventListener("input",()=>updatePrintCustomerPrice(false)));
+  $("pjFinalPrice").addEventListener("input",()=>{printPriceManuallyEdited=true;});
+  $("pjUseCalculatedPrice").onclick=()=>{printPriceManuallyEdited=false;updatePrintCustomerPrice(true);};
+  $("refreshPrintJobs").onclick=loadPrintingJobs;
+  $("openPrintingTrash").onclick=renderPrintingTrash;
+  $("printingSearch").oninput=drawPrintingJobs;
+  $("printingStatusFilter").onchange=drawPrintingJobs;
   $("printingJobForm").onsubmit=savePrintingJob;
   await loadPrintingJobs();
 }
-
-async function loadPrintingJobs() {
+async function loadPrintingJobs(){
   let data;
-  try { data=await fetchAllRows("printing_jobs", "*", q => q.eq("deleted",false).order("created_at",{ascending:false})); }
-  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="13" class="empty">Could not load jobs: ${escapeHTML(error.message)}. Run the 3D printing finance SQL migration first.</td></tr>`;return;}
+  try{data=await fetchAllRows("printing_jobs","*",q=>q.eq("deleted",false).order("created_at",{ascending:false}));}
+  catch(error){if($("printingJobsTable"))$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Could not load jobs: ${escapeHTML(error.message)}. Run the 3D printing finance SQL migration first.</td></tr>`;return;}
   printingJobsCache=data||[];
-  try { const paid=await getJobPaidMap(printingJobsCache.map(x=>x.id)); printingJobsCache.forEach(x=>x._paid=paid[x.id]||0); }
-  catch(error){$("printingJobsTable").innerHTML=`<tr><td colspan="13" class="empty">Payment data error: ${escapeHTML(error.message)}</td></tr>`;return;}
+  try{const paid=await getJobPaidMap(printingJobsCache.map(x=>x.id));printingJobsCache.forEach(x=>x._paid=paid[x.id]||0);}
+  catch(error){if($("printingJobsTable"))$("printingJobsTable").innerHTML=`<tr><td colspan="11" class="empty">Payment data error: ${escapeHTML(error.message)}</td></tr>`;return;}
+  try{printingExpensesCache=await fetchAllRows("atl_printing_expenses","*",q=>q.eq("deleted",false).order("expense_date",{ascending:false}));printingExpensesLoadError="";}
+  catch(error){printingExpensesCache=[];printingExpensesLoadError=error.message;}
   drawPrintingJobs();
 }
-
-function drawPrintingJobs() {
-  if(!$("printingJobsTable")) return;
+function drawPrintingJobs(){
+  if(!$("printingJobsTable"))return;
   const term=($("printingSearch")?.value||"").toLowerCase().trim();
   const status=$("printingStatusFilter")?.value||"";
   const rows=printingJobsCache.filter(j=>(!status||j.status===status)&&[j.job_code,j.customer_name,j.model_name,j.material].join(" ").toLowerCase().includes(term));
-  const all=printingJobsCache;
-  const estimate=all.reduce((a,j)=>a+Number(j.amount||0),0), earned=all.reduce((a,j)=>a+Number(j._paid||0),0);
-  const filament=all.reduce((a,j)=>a+Number(j.filament_cost||0),0), maintenance=all.reduce((a,j)=>a+Number(j.maintenance_cost||0),0), expenses=filament+maintenance;
+  const estimate=printingJobsCache.reduce((a,j)=>a+Number(j.amount||0),0);
+  const earned=printingJobsCache.reduce((a,j)=>a+Number(j._paid||0),0);
+  const filament=printingExpensesCache.filter(e=>e.expense_type==="FILAMENT").reduce((a,e)=>a+Number(e.amount||0),0);
+  const maintenance=printingExpensesCache.filter(e=>e.expense_type==="MAINTENANCE").reduce((a,e)=>a+Number(e.amount||0),0);
+  const expenses=filament+maintenance;
   [["printTotalEstimates",estimate],["printTotalEarned",earned],["printFilamentSpent",filament],["printMaintenanceSpent",maintenance],["printTotalExpenses",expenses],["printNetResult",earned-expenses]].forEach(([id,value])=>{if($(id))$(id).textContent=money(value);});
-  if(!rows.length){$("printingJobsTable").innerHTML='<tr><td colspan="13" class="empty">No printing jobs found.</td></tr>';return;}
+  const warning=$("printExpenseWarning");
+  if(warning){warning.classList.toggle("hidden",!printingExpensesLoadError);if(printingExpensesLoadError)warning.textContent="Studio costs are not available yet. Run the new 3D Studio Costs SQL migration in Supabase. Details: "+printingExpensesLoadError;}
+  if(!rows.length){$("printingJobsTable").innerHTML='<tr><td colspan="11" class="empty">No printing jobs found.</td></tr>';return;}
   $("printingJobsTable").innerHTML=rows.map(j=>{
-    const total=Number(j.amount||0), paid=Number(j._paid||0), balance=Math.max(0,total-paid), state=paymentState(total,paid);
-    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name||"—")}</td><td>${escapeHTML(j.model_name||"—")}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(j.filament_cost)}</td><td>${money(j.maintenance_cost)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status||"—")}</span></td><td><div class="actions"><button type="button" class="btn btn-success" data-job-payment="${escapeHTML(j.id)}" ${balance<=0?'disabled':''}>Add payment</button><button type="button" class="btn btn-outline" data-job-status="${escapeHTML(j.id)}">Status</button><button type="button" class="btn btn-danger" data-job-delete="${escapeHTML(j.id)}">Delete</button></div></td></tr>`;
+    const total=Number(j.amount||Number(j.weight_grams||0)*Number(j.rate_per_gram||0));
+    const paid=Number(j._paid||0),balance=Math.max(0,total-paid),state=paymentState(total,paid);
+    return `<tr><td><strong>${escapeHTML(j.job_code||String(j.id).slice(0,8))}</strong></td><td>${escapeHTML(j.customer_name||"—")}</td><td>${escapeHTML(j.model_name||"—")}</td><td>${escapeHTML(j.material||"—")}</td><td>${Number(j.weight_grams||0)} g</td><td>${money(total)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="tag">${state}</span></td><td><span class="tag">${escapeHTML(j.status||"—")}</span></td><td><div class="actions"><button type="button" class="btn btn-success" data-job-payment="${escapeHTML(j.id)}" ${balance<=0?'disabled':''}>Add payment</button><button type="button" class="btn btn-outline" data-job-status="${escapeHTML(j.id)}">Status</button><button type="button" class="btn btn-danger" data-job-delete="${escapeHTML(j.id)}">Delete</button></div></td></tr>`;
   }).join("");
   $("printingJobsTable").querySelectorAll("[data-job-payment]").forEach(b=>b.onclick=()=>recordJobPayment(b.dataset.jobPayment));
   $("printingJobsTable").querySelectorAll("[data-job-status]").forEach(b=>b.onclick=()=>changeJobStatus(b.dataset.jobStatus));
   $("printingJobsTable").querySelectorAll("[data-job-delete]").forEach(b=>b.onclick=()=>deletePrintingJob(b.dataset.jobDelete));
 }
-
-async function savePrintingJob(event) {
-  event.preventDefault(); const button=$("savePrintingJob"); button.disabled=true; button.textContent="Saving...";
-  try {
+async function savePrintingJob(event){
+  event.preventDefault();
+  const button=$("savePrintingJob");button.disabled=true;button.textContent="Saving...";
+  try{
+    const settings=getPrintStudioSettings();
     const x=calculatePrintQuote();
-    if(!Number.isFinite(x.weight)||x.weight<=0||!Number.isFinite(x.rate)||x.rate<0||!Number.isFinite(x.hours)||x.hours<0||!Number.isFinite(x.hourly)||x.hourly<0) throw new Error("Enter valid weight, printing rate, design hours and hourly rate.");
-    if(!Number.isFinite(x.filament)||x.filament<0||!Number.isFinite(x.maintenance)||x.maintenance<0||!Number.isFinite(x.total)||x.total<0) throw new Error("Costs and final price must be valid non-negative amounts.");
-    if(x.total>9999999999) throw new Error("Calculated job total is outside the supported range.");
-    const payload={customer_name:$("pjCustomer").value.trim(),model_name:$("pjModel").value.trim(),material:$("pjMaterial").value,colour:$("pjColour").value.trim(),weight_grams:x.weight,rate_per_gram:x.rate,design_hours:x.hours,design_hourly_rate:x.hourly,design_cost:Number(x.design.toFixed(2)),printing_charge:Number(x.print.toFixed(2)),calculated_amount:Number(x.calculated.toFixed(2)),manual_amount:x.manual===null?null:Number(x.manual.toFixed(2)),filament_cost:Number(x.filament.toFixed(2)),maintenance_cost:Number(x.maintenance.toFixed(2)),amount:Number(x.total.toFixed(2)),due_date:$("pjDue").value||null,status:$("pjStatus").value,notes:$("pjNotes").value.trim(),created_by:currentUser.id};
-    const {error}=await db.from("printing_jobs").insert(payload); if(error) throw error;
-    $("printingJobForm").reset(); $("pjWeight").value=1; $("pjRate").value=5; $("pjDesignHours").value=1; $("pjDesignRate").value=getPrintDefaultDesignRate(); $("pjFilamentCost").value=0; $("pjMaintenanceCost").value=0; updatePrintEstimate();
-    showToast("Printing job saved with price and expense details."); await loadPrintingJobs();
-  } catch(error){$("pjError").textContent=error.message;}
+    if(!Number.isFinite(x.weight)||x.weight<=0||!Number.isFinite(x.hours)||x.hours<0)throw new Error("Enter a valid filament weight and design hours.");
+    if(!Number.isFinite(x.total)||x.total<0)throw new Error("Final customer price must be a valid non-negative amount.");
+    if(x.total>9999999999)throw new Error("Final customer price is outside the supported range.");
+    const manuallyChanged=printPriceManuallyEdited||Math.abs(x.total-x.calculated)>0.005;
+    const payload={customer_name:$("pjCustomer").value.trim(),model_name:$("pjModel").value.trim(),material:$("pjMaterial").value,colour:$("pjColour").value.trim(),weight_grams:x.weight,rate_per_gram:x.rate,design_hours:x.hours,design_hourly_rate:x.hourly,design_cost:Number(x.design.toFixed(2)),printing_charge:Number(x.print.toFixed(2)),calculated_amount:Number(x.calculated.toFixed(2)),manual_amount:manuallyChanged?Number(x.total.toFixed(2)):null,amount:Number(x.total.toFixed(2)),due_date:$("pjDue").value||null,status:$("pjStatus").value,notes:$("pjNotes").value.trim(),created_by:currentUser.id};
+    const {error}=await db.from("printing_jobs").insert(payload);if(error)throw error;
+    $("printingJobForm").reset();
+    $("pjWeight").value="1";
+    $("pjDesignHours").value=String(settings.defaultDesignHours);
+    printPriceManuallyEdited=false;
+    updatePrintCustomerPrice(true);
+    showToast("Printing job saved. Record filament and maintenance spending in the Studio Costs tab.");
+    await loadPrintingJobs();
+  }catch(error){$("pjError").textContent=error.message;}
   finally{button.disabled=false;button.textContent="Save print job";}
+}
+
+async function renderPrintingCostsView(){
+  const content=$("printingStudioContent");if(!content)return;
+  content.innerHTML=`
+    <div class="cards"><div class="stat-card"><div class="stat-title">Total filament purchases</div><div class="stat-number" id="studioFilamentTotal">₹0.00</div></div><div class="stat-card"><div class="stat-title">Total maintenance spending</div><div class="stat-number" id="studioMaintenanceTotal">₹0.00</div></div><div class="stat-card"><div class="stat-title">Total Studio costs</div><div class="stat-number" id="studioAllCostsTotal">₹0.00</div></div></div>
+    <div class="panel printing-create-panel"><div class="printing-section-heading"><span class="printing-heading-icon">＋</span><div><h3>Record Studio expense</h3><p>Record filament purchases and machine maintenance independently from individual print jobs.</p></div></div>
+      <form id="printingExpenseForm"><div class="form-grid">
+        <div class="field"><label>Expense category *</label><select id="studioExpenseType" required><option value="FILAMENT">Filament purchase</option><option value="MAINTENANCE">Machine maintenance</option></select></div>
+        <div class="field"><label>Date *</label><input id="studioExpenseDate" type="date" required></div>
+        <div class="field"><label>Item / Description *</label><input id="studioExpenseItem" required maxlength="180" placeholder="e.g. PLA 1kg spool / Nozzle replacement"></div>
+        <div class="field"><label>Quantity</label><input id="studioExpenseQuantity" type="number" min="0" step="0.001" placeholder="e.g. 1"></div>
+        <div class="field"><label>Unit</label><select id="studioExpenseUnit"><option value="spool">Spool</option><option value="kg">kg</option><option value="g">grams</option><option value="pcs">pcs</option><option value="service">Service</option><option value="hours">Hours</option></select></div>
+        <div class="field"><label>Supplier / Service provider</label><input id="studioExpenseVendor" maxlength="150" placeholder="Optional"></div>
+        <div class="field"><label>Total amount paid (₹) *</label><input id="studioExpenseAmount" type="number" min="0.01" step="0.01" required placeholder="0.00"></div>
+        <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="studioExpenseNotes" rows="2" placeholder="Invoice number, maintenance details, etc."></textarea></div>
+      </div><button class="btn btn-primary" type="submit" id="saveStudioExpense">Save expense</button><div id="studioExpenseError" class="error"></div></form>
+    </div>
+    <div class="panel printing-jobs-panel"><div class="printing-list-heading"><div><h3>${printingCostsTrashMode?"Deleted Studio expenses":"Studio expense records"}</h3><p>These costs are not assigned to any single print job.</p></div><button type="button" class="btn btn-outline" id="toggleStudioExpenseTrash">${printingCostsTrashMode?"← Active expenses":"🗑 View Trash"}</button></div>
+      <div class="toolbar printing-toolbar"><select id="studioExpenseFilter"><option value="">All categories</option><option value="FILAMENT">Filament purchase</option><option value="MAINTENANCE">Maintenance</option></select><div class="search"><input id="studioExpenseSearch" placeholder="Search description or supplier..."></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Quantity</th><th>Supplier / Provider</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="studioExpenseTable"><tr><td colspan="8" class="empty">Loading expenses...</td></tr></tbody></table></div>
+    </div>`;
+  $("studioExpenseDate").value=new Date().toISOString().slice(0,10);
+  $("toggleStudioExpenseTrash").onclick=async()=>{printingCostsTrashMode=!printingCostsTrashMode;await renderPrintingCostsView();};
+  $("studioExpenseFilter").onchange=drawPrintingExpenses;
+  $("studioExpenseSearch").oninput=drawPrintingExpenses;
+  $("printingExpenseForm").onsubmit=savePrintingExpense;
+  await loadPrintingExpenses();
+}
+async function loadPrintingExpenses(){
+  try{
+    printingExpensesTotalsCache=await fetchAllRows("atl_printing_expenses","*",q=>q.eq("deleted",false));
+    printingExpensesCache=printingCostsTrashMode
+      ? await fetchAllRows("atl_printing_expenses","*",q=>q.eq("deleted",true).order("expense_date",{ascending:false}).order("created_at",{ascending:false}))
+      : printingExpensesTotalsCache;
+    printingExpensesLoadError="";
+    drawPrintingExpenses();
+  }catch(error){
+    printingExpensesLoadError=error.message;
+    if($("studioExpenseTable"))$("studioExpenseTable").innerHTML=`<tr><td colspan="8" class="empty">Could not load Studio expenses: ${escapeHTML(error.message)}. Run the 3D Studio Costs SQL migration in Supabase.</td></tr>`;
+    if($("studioFilamentTotal"))$("studioFilamentTotal").textContent="—";
+    if($("studioMaintenanceTotal"))$("studioMaintenanceTotal").textContent="—";
+    if($("studioAllCostsTotal"))$("studioAllCostsTotal").textContent="—";
+  }
+}
+function drawPrintingExpenses(){
+  if(!$("studioExpenseTable"))return;
+  const active=printingExpensesCache;
+  const totals=printingExpensesTotalsCache;
+  const filament=totals.filter(e=>e.expense_type==="FILAMENT").reduce((a,e)=>a+Number(e.amount||0),0);
+  const maintenance=totals.filter(e=>e.expense_type==="MAINTENANCE").reduce((a,e)=>a+Number(e.amount||0),0);
+  if($("studioFilamentTotal"))$("studioFilamentTotal").textContent=money(filament);
+  if($("studioMaintenanceTotal"))$("studioMaintenanceTotal").textContent=money(maintenance);
+  if($("studioAllCostsTotal"))$("studioAllCostsTotal").textContent=money(filament+maintenance);
+  const type=$("studioExpenseFilter")?.value||"";
+  const term=($("studioExpenseSearch")?.value||"").toLowerCase().trim();
+  const rows=active.filter(e=>(!type||e.expense_type===type)&&[e.item_name,e.vendor,e.notes].join(" ").toLowerCase().includes(term));
+  if(!rows.length){$("studioExpenseTable").innerHTML=`<tr><td colspan="8" class="empty">${printingCostsTrashMode?"No deleted Studio expenses.":"No Studio expenses recorded yet."}</td></tr>`;return;}
+  $("studioExpenseTable").innerHTML=rows.map(e=>{
+    const qty=e.quantity===null||e.quantity===undefined||e.quantity===""?"—":`${Number(e.quantity)} ${escapeHTML(e.unit||"")}`;
+    const category=e.expense_type==="FILAMENT"?"Filament purchase":"Maintenance";
+    const action=printingCostsTrashMode?`<button type="button" class="btn btn-success" data-studio-expense-restore="${escapeHTML(e.id)}">Restore</button>`:`<button type="button" class="btn btn-danger" data-studio-expense-trash="${escapeHTML(e.id)}">Move to Trash</button>`;
+    return `<tr><td>${escapeHTML(formatDate(e.expense_date))}</td><td><span class="tag">${category}</span></td><td><strong>${escapeHTML(e.item_name||"—")}</strong></td><td>${qty}</td><td>${escapeHTML(e.vendor||"—")}</td><td><strong>${money(e.amount)}</strong></td><td>${escapeHTML(e.notes||"—")}</td><td><div class="actions">${action}</div></td></tr>`;
+  }).join("");
+  $("studioExpenseTable").querySelectorAll("[data-studio-expense-trash]").forEach(b=>b.onclick=()=>moveStudioExpenseToTrash(b.dataset.studioExpenseTrash));
+  $("studioExpenseTable").querySelectorAll("[data-studio-expense-restore]").forEach(b=>b.onclick=()=>restoreStudioExpense(b.dataset.studioExpenseRestore));
+}
+async function savePrintingExpense(event){
+  event.preventDefault();
+  const button=$("saveStudioExpense");button.disabled=true;button.textContent="Saving...";
+  try{
+    const amount=Number($("studioExpenseAmount").value);
+    const quantityText=$("studioExpenseQuantity").value.trim();
+    const quantity=quantityText===""?null:Number(quantityText);
+    if(!Number.isFinite(amount)||amount<=0)throw new Error("Enter an amount greater than zero.");
+    if(quantity!==null&&(!Number.isFinite(quantity)||quantity<0))throw new Error("Enter a valid quantity.");
+    const payload={expense_type:$("studioExpenseType").value,expense_date:$("studioExpenseDate").value,item_name:$("studioExpenseItem").value.trim(),quantity,unit:quantity===null?null:$("studioExpenseUnit").value,vendor:$("studioExpenseVendor").value.trim()||null,amount:Number(amount.toFixed(2)),notes:$("studioExpenseNotes").value.trim()||null,created_by:currentUser.id};
+    const {error}=await db.from("atl_printing_expenses").insert(payload);if(error)throw error;
+    $("printingExpenseForm").reset();$("studioExpenseDate").value=new Date().toISOString().slice(0,10);
+    showToast("Studio expense recorded.");
+    await loadPrintingExpenses();
+  }catch(error){$("studioExpenseError").textContent=error.message;}
+  finally{button.disabled=false;button.textContent="Save expense";}
+}
+async function moveStudioExpenseToTrash(expenseId){
+  const row=printingExpensesCache.find(e=>String(e.id)===String(expenseId));if(!row)return;
+  const ok=await atlConfirm(`Move ${row.item_name||"this expense"} to Trash?`,`Move Studio expense to Trash`,true);if(!ok)return;
+  try{
+    const {error}=await db.from("atl_printing_expenses").update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:currentUser.id}).eq("id",expenseId).eq("deleted",false);
+    if(error)throw error;
+    showToast("Expense moved to Trash.");await loadPrintingExpenses();
+  }catch(error){await atlAlert("Could not move expense to Trash: "+error.message,"Expense error","⚠");}
+}
+async function restoreStudioExpense(expenseId){
+  try{
+    const {error}=await db.from("atl_printing_expenses").update({deleted:false,deleted_at:null,deleted_by:null}).eq("id",expenseId).eq("deleted",true);
+    if(error)throw error;
+    showToast("Expense restored.");await loadPrintingExpenses();
+  }catch(error){await atlAlert("Could not restore expense: "+error.message,"Restore failed","⚠");}
 }
 
 async function recordJobPayment(jobId) {
@@ -4599,7 +4766,35 @@ async function renderReports(){
   try{const [students,projects,components,jobs,allPayments]=await Promise.all([getCount("students",true),getCount("projects",true),getCount("components",true),getCount("printing_jobs",true),fetchAllRows("atl_payments","*",q=>q.eq("deleted",false).order("payment_date",{ascending:false}).order("created_at",{ascending:false}))]);const total=allPayments.reduce((a,p)=>a+Number(p.amount||0),0);const recent=allPayments.slice(0,10);const cards=[["Students",students],["Projects",projects],["Components",components],["Active 3D Print Jobs",jobs],["All-time Payments Received",money(total)]];$("reportCards").innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-title">${escapeHTML(c[0])}</div><div class="stat-number">${escapeHTML(c[1])}</div></div>`).join("");$("reportPayments").innerHTML=recent.map(p=>`<tr><td>${formatDate(p.payment_date)}</td><td>${escapeHTML(p.customer_name||"—")}</td><td>${money(p.amount)}</td><td>${escapeHTML(p.payment_method)}</td><td>${escapeHTML(p.received_by||"Lab Admin")}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">No payments yet.</td></tr>';}catch(error){$("reportCards").innerHTML=`<div class="notice">Report error: ${escapeHTML(error.message)}</div>`;}
 }
 
-async function renderSettings(){if(!isAdmin()){await atlAlert("Only Admin can access Settings.","Access denied","🔒");return;}$("pageContent").innerHTML=`<div class="page-heading"><div><h1>Settings</h1><p>Administrator information and system status.</p></div></div><div class="panel"><h3>Signed-in administrator</h3><p><strong>Username:</strong> ${escapeHTML(currentProfile?.username||"—")}</p><p><strong>Role:</strong> ${escapeHTML(currentProfile?.role||"—")}</p><p><strong>Email:</strong> ${escapeHTML(currentUser?.email||"—")}</p></div><div class="panel"><h3>Year-end archive & cleanup</h3><p class="muted">Archive old records and move them to Trash after a backup.</p><button class="btn btn-danger" id="openYearEndCleanup">Open year-end cleanup</button></div><div class="panel"><h3>Database connection</h3><p class="muted">The application uses Supabase authentication and Row Level Security. Do not disable RLS or expose a service-role key in this HTML file.</p></div>`;$("openYearEndCleanup").onclick=renderYearEndCleanup;}
+async function renderSettings(){
+  if(!isAdmin()){await atlAlert("Only Admin can access Settings.","Access denied","🔒");return;}
+  const printSettings=getPrintStudioSettings();
+  $("pageContent").innerHTML=`
+    <div class="page-heading"><div><h1>Settings</h1><p>Manage administrator information and application defaults.</p></div></div>
+    <div class="panel"><h3>Signed-in administrator</h3><p><strong>Username:</strong> ${escapeHTML(currentProfile?.username||"—")}</p><p><strong>Role:</strong> ${escapeHTML(currentProfile?.role||"—")}</p><p><strong>Email:</strong> ${escapeHTML(currentUser?.email||"—")}</p></div>
+    <div class="panel"><h3>3D Printing pricing defaults</h3><p class="muted">These values are used to calculate suggested prices for new print jobs. You can still edit the final price on an individual job. Changing these defaults does not change old jobs.</p>
+      <form id="printPricingSettingsForm"><div class="form-grid">
+        <div class="field"><label>Printing rate per gram (₹)</label><input id="settingPrintRatePerGram" type="number" min="0" step="0.01" required value="${printSettings.ratePerGram}"></div>
+        <div class="field"><label>Design charge per hour (₹)</label><input id="settingPrintDesignHourlyRate" type="number" min="0" step="0.01" required value="${printSettings.designHourlyRate}"></div>
+        <div class="field"><label>Default design hours per new job</label><input id="settingPrintDefaultDesignHours" type="number" min="0" step="0.25" required value="${printSettings.defaultDesignHours}"></div>
+      </div><button class="btn btn-primary" type="submit" id="savePrintPricingSettings">Save pricing defaults</button><div id="printPricingSettingsMessage" class="error" role="status"></div></form>
+      <p class="muted" style="margin-top:10px">Example: 1 gram × ₹5 + 1 design hour × ₹65 = ₹70 suggested price. Set the design rate to ₹66 here to use ₹66 per hour for new jobs.</p>
+      <p class="muted">These defaults are saved in this browser only. Other computers or browsers need the same values entered in their Settings.</p>
+    </div>
+    <div class="panel"><h3>Year-end archive & cleanup</h3><p class="muted">Archive old records and move them to Trash after a backup.</p><button class="btn btn-danger" id="openYearEndCleanup">Open year-end cleanup</button></div>
+    <div class="panel"><h3>Database connection</h3><p class="muted">The application uses Supabase authentication and Row Level Security. Do not disable RLS or expose a service-role key in this HTML file.</p></div>`;
+  $("printPricingSettingsForm").onsubmit=event=>{
+    event.preventDefault();
+    const rate=Number($("settingPrintRatePerGram").value),hourly=Number($("settingPrintDesignHourlyRate").value),hours=Number($("settingPrintDefaultDesignHours").value);
+    if(![rate,hourly,hours].every(v=>Number.isFinite(v)&&v>=0)){$("printPricingSettingsMessage").textContent="Enter valid non-negative values.";return;}
+    localStorage.setItem("atl_print_rate_per_gram",String(rate));
+    localStorage.setItem("atl_print_design_hourly_rate",String(hourly));
+    localStorage.setItem("atl_print_default_design_hours",String(hours));
+    showToast("3D Printing pricing defaults saved on this browser.");
+    $("printPricingSettingsMessage").textContent="Pricing defaults saved successfully.";
+  };
+  $("openYearEndCleanup").onclick=renderYearEndCleanup;
+}
 
 
 /* =========================================================
